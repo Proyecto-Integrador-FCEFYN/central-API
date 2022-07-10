@@ -1,0 +1,7 @@
+images
+videos
+.idea
+.vscode
+config
+venv
+__pycache__

@@ -1,0 +1,21 @@
+{
+  "db":
+  {
+    "conn_string": "mongodb+srv://cluster0.dmmkg.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority",
+    "cert_path": "config/agustin2022.pem"
+  },
+  "images":
+  {
+    "default_file_name": "image.jpg"
+  },
+
+  "videos":
+  {
+    "default_file_name": "video1.avi"
+  },
+  "apis":
+  {
+    "images_url": "https://picsum.photos/200/300"
+  }
+}
+
