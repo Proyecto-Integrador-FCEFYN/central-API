@@ -32,6 +32,12 @@ class ImageToVideo:
         video.release()
 
 
+def clean_images():
+    images = [img for img in os.listdir('images')]
+    for path in images:
+        os.remove(f'images/{path}')
+
+
 class ImageClient:
 
     def __init__(self, url):
@@ -52,10 +58,11 @@ class ImageClient:
         print(f'cant frames= {cantidad}, seg={tiempo}, fps={cantidad / tiempo}')
         return cantidad / tiempo
 
-    def clean_images(self):
-        images = [img for img in os.listdir('images')]
-        for path in images:
-            os.remove(f'images/{path}')
+
+def clean_videos():
+    images = [img for img in os.listdir('videos')]
+    for path in images:
+        os.remove(f'videos/{path}')
 
 
 class DatabaseConnection:
@@ -70,21 +77,6 @@ class DatabaseConnection:
                                   tlsCertificateKeyFile='config/agustin2022.pem',
                                   server_api=ServerApi('1'))
 
-    def save_to_db(self):
-        file_used = 'videos/video.avi'
-
-        db = self.client['tesis']
-        collection = db['files']
-        with open(file_used, "rb") as f:
-            encoded = Binary(f.read())
-        collection.insert_one({
-            "filename": file_used,
-            "file": encoded,
-            "description": "test",
-            "timestamp": datetime.now()
-        })
-        print("video saved")
-
     def save_to_db_grid(self, filename):
         db = self.client['tesis']
         fs = gridfs.GridFS(db)
@@ -93,18 +85,6 @@ class DatabaseConnection:
         file_id = fs.put(data=encoded, filename=filename)
         print(f'the file with id: {file_id} has been saved')
         return file_id
-
-    def load_from_db(self):
-        db = self.client['tesis']
-        collection = db['files']
-        document = collection.find_one({
-            "filename": "videos/video.avi"
-        })
-        binary_data = document['file']
-        with open('videos/video_loaded.avi', "wb") as f:
-            data = Binary(binary_data)
-            f.write(data)
-        print(f" El archivo {document['filename']} ha sido guardado")
 
     def load_from_db_grid(self, filename):
         db = self.client['tesis']
@@ -125,14 +105,12 @@ class DatabaseConnection:
         # collection = db['files']
         fs = gridfs.GridFS(db)
         document = fs.find_one(search_dict)
+        if document is None:
+            return FileNotFoundError
         print(f'Se encontro un archivo con nombre: {document.filename}')
         binary_data = document.read()
         with open(f'videos/{document.filename}', "wb") as f:
             data = Binary(binary_data)
             f.write(data)
         print(f" El archivo {document.filename} ha sido guardado")
-
-    def clean_videos(self):
-        images = [img for img in os.listdir('videos')]
-        for path in images:
-            os.remove(f'videos/{path}')
+        return document
