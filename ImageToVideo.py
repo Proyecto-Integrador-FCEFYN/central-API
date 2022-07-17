@@ -6,14 +6,13 @@ from datetime import datetime
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from bson.binary import Binary
-import hashlib
 import gridfs
 
 
 class ImageToVideo:
 
-    def __init__(self, video):
-        self.video = video
+    def __init__(self, video_path):
+        self.video = video_path
 
     def video_from_images(self, fps):
         image_folder = 'images'
@@ -38,15 +37,18 @@ class ImageClient:
     def __init__(self, url):
         self.url = url
 
-    def get_image(self, tiempo):
-        cantidad = 0
+    def get_images(self, tiempo):
+        images_array = []
+        cantidad = 0  # cantidad de frames
         timestamp_salida = time.time() + tiempo
         while time.time() < timestamp_salida:
             response = r.get(url=self.url, stream=True)
-            f = open(f'images/{time.time()}.jpg', "wb")
-            f.write(response.content)
-            f.close()
+            images_array.append(response.content)
             cantidad += 1
+        for image in images_array:
+            f = open(f'images/{time.time()}.jpg', "wb")
+            f.write(image)
+            f.close()
         print(f'cant frames= {cantidad}, seg={tiempo}, fps={cantidad / tiempo}')
         return cantidad / tiempo
 
@@ -83,15 +85,14 @@ class DatabaseConnection:
         })
         print("video saved")
 
-    def save_to_db_grid(self):
-        file_used = 'videos/video.avi'
-
+    def save_to_db_grid(self, filename):
         db = self.client['tesis']
         fs = gridfs.GridFS(db)
-        with open(file_used, "rb") as f:
+        with open(f'videos/{filename}', "rb") as f:
             encoded = Binary(f.read())
-        file_id = fs.put(data=encoded, filename='video1')
+        file_id = fs.put(data=encoded, filename=filename)
         print(f'the file with id: {file_id} has been saved')
+        return file_id
 
     def load_from_db(self):
         db = self.client['tesis']
@@ -105,16 +106,33 @@ class DatabaseConnection:
             f.write(data)
         print(f" El archivo {document['filename']} ha sido guardado")
 
-    def load_from_db_grid(self):
+    def load_from_db_grid(self, filename):
         db = self.client['tesis']
         # collection = db['files']
         fs = gridfs.GridFS(db)
         document = fs.find_one({
-            "filename": "video1"
+            "filename": filename
         })
         print(document)
         binary_data = document.read()
-        with open('videos/video_loaded.avi', "wb") as f:
+        with open(f'videos/{filename}', "wb") as f:
             data = Binary(binary_data)
             f.write(data)
         print(f" El archivo {document.filename} ha sido guardado")
+
+    def load_from_db_dict(self, search_dict):
+        db = self.client['tesis']
+        # collection = db['files']
+        fs = gridfs.GridFS(db)
+        document = fs.find_one(search_dict)
+        print(f'Se encontro un archivo con nombre: {document.filename}')
+        binary_data = document.read()
+        with open(f'videos/{document.filename}', "wb") as f:
+            data = Binary(binary_data)
+            f.write(data)
+        print(f" El archivo {document.filename} ha sido guardado")
+
+    def clean_videos(self):
+        images = [img for img in os.listdir('videos')]
+        for path in images:
+            os.remove(f'videos/{path}')
