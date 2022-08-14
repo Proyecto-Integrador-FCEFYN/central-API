@@ -9,9 +9,12 @@ import pprint
 # cfg = None
 app = Flask(__name__)
 
+# URL de la raspi
 images_url = "http://192.168.1.140/single"
-django_url = "mongodb+srv://cluster0.dmmkg.mongodb.net/" \
-             "?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
+# URL de la base de datos
+# mongo_url = "mongodb+srv://cluster0.dmmkg.mongodb.net/" \
+#             "?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
+mongo_url = "mongodb://localhost:27017"
 
 
 @app.route("/record/<int:seconds>")
@@ -23,7 +26,7 @@ def video_recorder(seconds):
     video_converter = ImageToVideo(video_path=filename)
     video_converter.video_from_images(fps=fps)
     clean_images()
-    db = DatabaseConnection(connection_string=django_url)
+    db = DatabaseConnection(connection_string=mongo_url)
     db.connect()
     file_id = db.save_to_db_grid(filename)
     ret = {
@@ -37,11 +40,36 @@ def video_recorder(seconds):
 
 @app.route('/download/<string:filename>')
 def download_file(filename):
-    db = DatabaseConnection(connection_string=django_url)
+    db = DatabaseConnection(connection_string=mongo_url)
     clean_videos()
     db.connect()
     db.load_from_db_grid(filename)
     return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
+
+
+@app.route('/testupload/<string:event_type>/<string:filename>')
+def get_event_picture(event_type, filename):
+    db = DatabaseConnection(connection_string=mongo_url)
+    db.connect_local()
+    db.save_event_file(filename, 'tesis')
+    # data = db.load_event_file('2022-07-21-19:13:45.763157.avi,'
+    #                           'tesis')
+    # return data
+    ret = {
+        "id": str(filename),
+        "filename": filename,
+        "seconds": event_type,
+        "msg": "A file was saved into db!"
+    }
+    return ret
+
+
+@app.route('/events/<string:event_type>/<string:filename>')
+def save_event_picture(event_type, filename):
+    db = DatabaseConnection(connection_string=mongo_url)
+    db.connect_local()
+    data = db.load_event_file(filename, 'tesis')
+    return data
 
 
 @app.route('/search')
@@ -60,7 +88,7 @@ def download_file_by_dict():
     if _length is not None:
         my_dict['length'] = _length
 
-    db = DatabaseConnection(connection_string=django_url)
+    db = DatabaseConnection(connection_string=mongo_url)
     clean_videos()
     db.connect()
 

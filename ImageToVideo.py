@@ -77,6 +77,9 @@ class DatabaseConnection:
                                   tlsCertificateKeyFile='config/agustin2022.pem',
                                   server_api=ServerApi('1'))
 
+    def connect_local(self):
+        self.client = MongoClient(self.connection_string)
+
     def save_to_db_grid(self, filename):
         db = self.client['tesis']
         fs = gridfs.GridFS(db)
@@ -114,3 +117,23 @@ class DatabaseConnection:
             f.write(data)
         print(f" El archivo {document.filename} ha sido guardado")
         return document
+
+    def load_event_file(self, filename, database='eventos'):
+        db = self.client[database]
+        fs = gridfs.GridFS(db)
+        document = fs.find_one({
+            "filename": filename
+        })
+        print(document)
+        binary_data = document.read()
+        print(f" El archivo {document.filename} ha sido encontrado")
+        return Binary(binary_data)
+
+    def save_event_file(self, filename, database='eventos'):
+        db = self.client[database]
+        fs = gridfs.GridFS(db)
+        with open(f'test.png', "rb") as f:
+            encoded = Binary(f.read())
+        file_id = fs.put(data=encoded, filename=filename)
+        print(f'the file with id: {file_id} has been saved')
+        return file_id
