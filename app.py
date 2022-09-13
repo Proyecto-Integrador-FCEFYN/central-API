@@ -33,7 +33,8 @@ def event_webbutton():
     print(f"{host} {port} {user_id} {device_id}")
 
     # Segundo obtener la foto
-    r = requests.get(url=f"http://{host}:{port}/single")
+    for picture in range(5):
+        r = requests.get(url=f"http://{host}:{port}/single")
 
     # Tercero guardar la foto
     db.connect()
@@ -49,7 +50,10 @@ def event_webbutton():
         "device_id": device_id
     }
     db.insert_event(event_collection='events_webopendoor', event_content=event)
-    # Ver si necesito una funcion que solo guarde diccionarios, deberia tenerla
+
+    # Quinto abro la puerta
+    requests.get(url=f"http://{host}:{port}/cerradura")
+
     return {
         "msg": "Event registered"
     }, 200
