@@ -177,3 +177,13 @@ class DatabaseConnection:
             "msg": "The record has been saved!"
         }
         return ret
+
+    def get_device_by_ip(self, devices_collection, ip):
+        db = self.client[self.event_db]
+        collection = db[devices_collection]
+        document = collection.find_one(
+            {
+                "ip_address": ip
+            }
+        )
+        return document

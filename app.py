@@ -22,6 +22,42 @@ files_base_url = "http://localhost:5000/files"
 db = DatabaseConnection(conn_string=mongo_url, files_db='files', event_db='admin2')
 
 
+@app.route("/event/timbre", methods=['POST'])
+def event_timbre():
+    print("Llego un request!")
+
+    # Obtengo la IP de la request
+    remote_ip = request.remote_addr
+    # remote_port = request.
+    # Llamo a la funcion para obtener el id de dispositivo
+    # a partir de la IP
+    db.connect()
+    # Recibo un documento/dict
+    document = db.get_device_by_ip(devices_collection='devices_device', ip=remote_ip)
+    if document is None:
+        return {'msg': 'Error con el dispositivo'}, 401
+
+    # Obtener la foto
+    port = document['port']
+    r = None
+    for picture in range(3):
+        r = requests.get(url=f"http://{remote_ip}:{port}/single")
+    # Guardar la foto
+    if r is not None:
+        file_data = db.insert_file(r.content)
+
+    # Guardar evento con la referencia del archivo que se guardo
+    event = {
+        "id": str(file_data['id']),
+        "date_time": dt.isoformat(dt.now()),
+        "image": f"{files_base_url}/{file_data['filename']}",
+        "device_id": document['id']
+    }
+    db.insert_event(event_collection='events_button', event_content=event)
+    print(document['id'])
+    return str(document['id'])
+
+
 @app.route("/event/webbutton", methods=['POST'])
 def event_webbutton():
     # Primero obtengo parametros de request
