@@ -3,8 +3,10 @@ import datetime
 from flask import Flask, send_file, request
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
+from datetime import datetime as dt
 import json
 import pprint
+import requests
 
 # cfg = None
 app = Flask(__name__)
@@ -15,6 +17,42 @@ images_url = "http://192.168.1.140/single"
 # mongo_url = "mongodb+srv://cluster0.dmmkg.mongodb.net/" \
 #             "?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
 mongo_url = "mongodb://localhost:27017"
+files_base_url = "http://localhost:5000/files"
+
+db = DatabaseConnection(conn_string=mongo_url, files_db='files', event_db='admin2')
+
+
+@app.route("/event/webbutton", methods=['POST'])
+def event_webbutton():
+    # Primero obtengo parametros de request
+    host = request.json['host']
+    port = request.json['port']
+    user_id = request.json['user_id']
+    device_id = request.json['device_id']
+
+    print(f"{host} {port} {user_id} {device_id}")
+
+    # Segundo obtener la foto
+    r = requests.get(url=f"http://{host}:{port}/single")
+
+    # Tercero guardar la foto
+    db.connect()
+    file_data = db.insert_file(r.content)
+
+    # Cuarto guardar evento con la referencia del archivo que se guardo
+
+    event = {
+        "id": str(file_data['id']),
+        "date_time": dt.isoformat(dt.now()),
+        "user_id": user_id,
+        "image": f"{files_base_url}/{file_data['filename']}",
+        "device_id": device_id
+    }
+    db.insert_event(event_collection='events_webopendoor', event_content=event)
+    # Ver si necesito una funcion que solo guarde diccionarios, deberia tenerla
+    return {
+        "msg": "Event registered"
+    }, 200
 
 
 @app.route("/record/<int:seconds>")
@@ -26,7 +64,7 @@ def video_recorder(seconds):
     video_converter = ImageToVideo(video_path=filename)
     video_converter.video_from_images(fps=fps)
     clean_images()
-    db = DatabaseConnection(connection_string=mongo_url)
+    # db = DatabaseConnection(connection_string=mongo_url)
     db.connect()
     file_id = db.save_to_db_grid(filename)
     ret = {
@@ -40,7 +78,7 @@ def video_recorder(seconds):
 
 @app.route('/download/<string:filename>')
 def download_file(filename):
-    db = DatabaseConnection(connection_string=mongo_url)
+    # db = DatabaseConnection(connection_string=mongo_url)
     clean_videos()
     db.connect()
     db.load_from_db_grid(filename)
@@ -49,7 +87,7 @@ def download_file(filename):
 
 @app.route('/testupload/<string:event_type>/<string:filename>')
 def get_event_picture(event_type, filename):
-    db = DatabaseConnection(connection_string=mongo_url)
+    # db = DatabaseConnection(conn_string=mongo_url)
     db.connect_local()
     db.save_event_file(filename, 'tesis')
     # data = db.load_event_file('2022-07-21-19:13:45.763157.avi,'
@@ -64,11 +102,12 @@ def get_event_picture(event_type, filename):
     return ret
 
 
-@app.route('/events/<string:event_type>/<string:filename>')
-def save_event_picture(event_type, filename):
-    db = DatabaseConnection(connection_string=mongo_url)
+@app.route('/files/<string:filename>')
+def save_event_picture(filename):
+    # db = DatabaseConnection(connection_string=mongo_url)
     db.connect_local()
-    data = db.load_event_file(filename, 'tesis')
+    data = db.load_event_file(filename, 'files')
+    # return send_file(data, mimetype='image/jpg')
     return data
 
 
@@ -88,7 +127,7 @@ def download_file_by_dict():
     if _length is not None:
         my_dict['length'] = _length
 
-    db = DatabaseConnection(connection_string=mongo_url)
+    # db = DatabaseConnection(connection_string=mongo_url)
     clean_videos()
     db.connect()
 

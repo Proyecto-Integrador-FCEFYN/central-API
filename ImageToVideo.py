@@ -1,3 +1,5 @@
+import uuid
+
 import cv2
 import os
 import requests as r
@@ -68,17 +70,27 @@ def clean_videos():
 class DatabaseConnection:
     client = None
 
-    def __init__(self, connection_string):
-        self.connection_string = connection_string
+    def __init__(self, conn_string, files_db, event_db):
+        self.client = None
+        self.conn_string = conn_string
+        self.files_db = files_db
+        self.event_db = event_db
 
     def connect(self):
-        self.client = MongoClient(self.connection_string,
-                                  tls=True,
-                                  tlsCertificateKeyFile='config/agustin2022.pem',
-                                  server_api=ServerApi('1'))
+        if 'localhost' in self.conn_string:
+            self.client = MongoClient(self.conn_string)
+        else:
+            self.client = MongoClient(self.conn_string,
+                                      tls=True,
+                                      tlsCertificateKeyFile='config/agustin2022.pem',
+                                      server_api=ServerApi('1'))
+
+    def close_connection(self):
+        self.client.close()
+        print("Se ha cerrado la conexion a la DB!")
 
     def connect_local(self):
-        self.client = MongoClient(self.connection_string)
+        self.client = MongoClient(self.conn_string)
 
     def save_to_db_grid(self, filename):
         db = self.client['tesis']
@@ -118,7 +130,7 @@ class DatabaseConnection:
         print(f" El archivo {document.filename} ha sido guardado")
         return document
 
-    def load_event_file(self, filename, database='eventos'):
+    def load_event_file(self, filename, database='files'):
         db = self.client[database]
         fs = gridfs.GridFS(db)
         document = fs.find_one({
@@ -128,6 +140,7 @@ class DatabaseConnection:
         binary_data = document.read()
         print(f" El archivo {document.filename} ha sido encontrado")
         return Binary(binary_data)
+        # return document
 
     def save_event_file(self, filename, database='eventos'):
         db = self.client[database]
@@ -137,3 +150,30 @@ class DatabaseConnection:
         file_id = fs.put(data=encoded, filename=filename)
         print(f'the file with id: {file_id} has been saved')
         return file_id
+
+    # Se pasa el payload del archivo, que seria la foto
+    # que vino por mqtt.
+    # Devuelve el nombre del archivo asignado.
+    def insert_file(self, payload):
+        filename = str(uuid.uuid4())
+        db = self.client[self.files_db]
+        fs = gridfs.GridFS(db)
+        encoded = Binary(payload)
+        file_id = fs.put(data=encoded, filename=f"{filename}.jpg", uuid=filename)
+        ret = {
+            "id": file_id,
+            "filename": f"{filename}.jpg",
+            "uuid": filename,
+            "msg": "The file has been saved!"
+        }
+        return ret
+
+    def insert_event(self, event_collection, event_content):
+        db = self.client[self.event_db]
+        collection = db[event_collection]
+        result = collection.insert_one(event_content)
+        ret = {
+            "inserted_id": result.inserted_id,
+            "msg": "The record has been saved!"
+        }
+        return ret
