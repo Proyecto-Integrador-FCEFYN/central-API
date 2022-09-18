@@ -22,6 +22,102 @@ files_base_url = "http://localhost:5000/files"
 db = DatabaseConnection(conn_string=mongo_url, files_db='files', event_db='admin2')
 
 
+@app.route("/event/rfid", methods=['POST'])
+def event_rfid():
+    print("Llego un request de RFID")
+    now = dt.now()
+    db.connect()
+
+    # Transformar el dato binario que viene de la request
+    rfid = request.get_data().replace(b'\x02', b'').replace(b'\x03', b'').decode('ascii')
+
+    # Extraer la hora actual y formatearla como viene begin y end con fecha de 1900-01-01.
+    # Se puede comparar las horas con < y > si la fecha es la misma.
+    current_time = dt.strptime(f'1900-01-01 {now.strftime("%H:%M:%S")}', "%Y-%j-%d %H:%M:%S")
+
+    # Conseguir ID usuario a partir de RFID
+    print(f"Recibi en la request en codigo {rfid}")
+    user_document = db.get_user_by_rfid(devices_collection='users_user', rfid=rfid)
+
+    if user_document is not None:
+        is_active = bool(user_document['is_active'])
+
+        # Calcular el dia de la semana y averiguar contra que ID hay que comparar
+        weekday = now.isoweekday()
+        if weekday == 1:
+            timezone_id = user_document['monday_id']
+        elif weekday == 2:
+            timezone_id = user_document['tuesday_id']
+        elif weekday == 3:
+            timezone_id = user_document['wednesday_id']
+        elif weekday == 4:
+            timezone_id = user_document['thursday_id']
+        elif weekday == 5:
+            timezone_id = user_document['friday_id']
+        elif weekday == 6:
+            timezone_id = user_document['saturday_id']
+        elif weekday == 7:
+            timezone_id = user_document['sunday_id']
+        else:
+            return {
+                "msg": f"Error con la weekday y timezone {weekday}"
+            }, 401
+
+        # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, se busca en la base
+        # y se extraen los parametros para comparar
+        timezone_doc = db.get_timezone_by_id('users_timezone', timezone_id)
+        begin = timezone_doc['begin']
+        end = timezone_doc['end']
+
+    # Obtener dispositivo a partir de la ip de la request
+    remote_ip = request.remote_addr
+    device_document = db.get_device_by_ip(devices_collection='devices_device', ip=remote_ip)
+    if device_document is not None:
+        # Obtener la foto
+        port = device_document['port']
+        device_id = device_document['id']
+        r = None
+        for picture in range(3):
+            r = requests.get(url=f"http://{remote_ip}:{port}/single")
+        # Guardar la foto
+        if r is not None:
+            file_data = db.insert_file(r.content)
+
+    # Condiciones para el permiso:
+    #   1. Que este en la franja horaria correcta
+    #   2. Que el usuario este activo
+    #   3. Que haya un usuario con el rfid que llego
+    #   4. Que haya un dispositivo cargado con la ip de la request
+    if user_document is not None and device_document is not None:
+        if begin < current_time < end and bool(user_document['is_active']):
+            # Permiso otorgado
+            event = {
+                "id": str(file_data['id']),
+                "date_time": dt.isoformat(dt.now()),
+                "user_id": user_document['id'],
+                "image": f"{files_base_url}/{file_data['filename']}",
+                "device_id": device_document['id']
+                }
+            db.insert_event(event_collection='events_permittedaccess', event_content=event)
+            # Abro la puerta
+            requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+    else:
+        # Permiso denegado
+        event = {
+            "id": str(file_data['id']),
+            "date_time": dt.isoformat(dt.now()),
+            "image": f"{files_base_url}/{file_data['filename']}",
+            "device_id": device_id
+            }
+        db.insert_event(event_collection='events_deniedaccess', event_content=event)
+        print("PERMISO DENEGADO")
+
+    ret = {
+        "msg": "Acceso permitido"
+    }
+    return ret
+
+
 @app.route("/event/timbre", methods=['POST'])
 def event_timbre():
     print("Llego un request!")

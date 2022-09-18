@@ -187,3 +187,23 @@ class DatabaseConnection:
             }
         )
         return document
+
+    def get_user_by_rfid(self, devices_collection, rfid):
+        db = self.client[self.event_db]
+        collection = db[devices_collection]
+        document = collection.find_one(
+            {
+                "code": rfid
+            }
+        )
+        return document
+
+    def get_timezone_by_id(self, tz_collection, tz_id):
+        db = self.client[self.event_db]
+        collection = db[tz_collection]
+        document = collection.find_one(
+            {
+                "id": tz_id
+            }
+        )
+        return document
