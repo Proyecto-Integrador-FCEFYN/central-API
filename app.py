@@ -89,7 +89,7 @@ def event_rfid():
     #   3. Que haya un usuario con el rfid que llego
     #   4. Que haya un dispositivo cargado con la ip de la request
     if user_document is not None and device_document is not None:
-        if begin < current_time < end and bool(user_document['is_active']):
+        if (begin < current_time < end or timezone_id == 1) and bool(user_document['is_active']):
             # Permiso otorgado
             event = {
                 "id": str(file_data['id']),
