@@ -77,13 +77,13 @@ class DatabaseConnection:
         self.event_db = event_db
 
     def connect(self):
-        if 'localhost' in self.conn_string:
-            self.client = MongoClient(self.conn_string)
-        else:
-            self.client = MongoClient(self.conn_string,
-                                      tls=True,
-                                      tlsCertificateKeyFile='config/agustin2022.pem',
-                                      server_api=ServerApi('1'))
+        # if 'localhost' in self.conn_string:
+        self.client = MongoClient(self.conn_string)
+        # else:
+        #     self.client = MongoClient(self.conn_string,
+        #                               tls=True,
+        #                               tlsCertificateKeyFile='config/agustin2022.pem',
+        #                               server_api=ServerApi('1'))
 
     def close_connection(self):
         self.client.close()

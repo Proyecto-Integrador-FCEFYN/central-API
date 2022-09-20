@@ -11,15 +11,15 @@ import requests
 # cfg = None
 app = Flask(__name__)
 
-# URL de la raspi
-images_url = "http://192.168.1.140/single"
-# URL de la base de datos
-# mongo_url = "mongodb+srv://cluster0.dmmkg.mongodb.net/" \
-#             "?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
-mongo_url = "mongodb://localhost:27017"
-files_base_url = "http://localhost:5000/files"
 
-db = DatabaseConnection(conn_string=mongo_url, files_db='files', event_db='admin2')
+# URL de la base de datos
+# mongo_url = "mongodb://localhost:27017"
+mongo_url = "mongodb://djongo:dj0ng0@24.232.132.26:27015/?authMechanism=DEFAULT&authSource=djongo"
+files_base_url = "http://localhost:5000/files"
+files_db = "djongo"
+event_db = "djongo"
+
+db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
 
 @app.route("/event/rfid", methods=['POST'])
@@ -191,17 +191,22 @@ def event_webbutton():
     }, 200
 
 
-@app.route("/record/<int:seconds>")
-def video_recorder(seconds):
-    filename = f'{datetime.datetime.now()}.avi'.replace(" ", "-")
+@app.route("/record/")
+def video_recorder():
 
-    client = ImageClient(url=images_url)
+    db.connect()
+    seconds = request.args.get('seconds', default=10, type=int)
+    device_url = request.args.get('url', type=str)
+    filename = f'{dt.isoformat(dt.now())}.avi'
+
+
+
+    client = ImageClient(url=f"{device_url}/single")
     fps = client.get_images(tiempo=seconds)
     video_converter = ImageToVideo(video_path=filename)
     video_converter.video_from_images(fps=fps)
     clean_images()
     # db = DatabaseConnection(connection_string=mongo_url)
-    db.connect()
     file_id = db.save_to_db_grid(filename)
     ret = {
         "id": str(file_id),
@@ -241,8 +246,9 @@ def get_event_picture(event_type, filename):
 @app.route('/files/<string:filename>')
 def save_event_picture(filename):
     # db = DatabaseConnection(connection_string=mongo_url)
-    db.connect_local()
-    data = db.load_event_file(filename, 'files')
+    # db.connect_local()
+    db.connect()
+    data = db.load_event_file(filename, files_db)
     # return send_file(data, mimetype='image/jpg')
     return data
 
