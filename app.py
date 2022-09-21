@@ -90,18 +90,30 @@ def event_rfid():
     #   3. Que haya un usuario con el rfid que llego
     #   4. Que haya un dispositivo cargado con la ip de la request
     if user_document is not None and device_document is not None:
-        if (begin < current_time < end or timezone_id == 1) and bool(user_document['is_active']):
-            # Permiso otorgado
-            event = {
-                "id": str(file_data['id']),
-                "date_time": dt.isoformat(dt.now()),
-                "user_id": user_document['id'],
-                "image": f"{files_base_url}/{file_data['filename']}",
-                "device_id": device_document['id']
-                }
-            db.insert_event(event_collection='events_permittedaccess', event_content=event)
-            # Abro la puerta
-            requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+        event = {
+            "id": str(file_data['id']),
+            "date_time": dt.isoformat(dt.now()),
+            "user_id": user_document['id'],
+            "image": f"{files_base_url}/{file_data['filename']}",
+            "device_id": device_document['id']
+            }
+        if begin < end:
+            if (begin < current_time < end or timezone_id == 1) \
+                    and bool(user_document['is_active']):
+                # Permiso otorgado
+                db.insert_event(event_collection='events_permittedaccess', event_content=event)
+                # Abro la puerta
+                requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+        elif begin > end:
+            if current_time < begin:
+                current_time = current_time + datetime.timedelta(days=1)
+            if (begin < current_time < end + datetime.timedelta(days=1) or timezone_id == 1) \
+                    and bool(user_document['is_active']):
+                # Permiso otorgado
+                db.insert_event(event_collection='events_permittedaccess', event_content=event)
+                # Abro la puerta
+                requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+
     else:
         # Permiso denegado
         event = {
