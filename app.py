@@ -14,7 +14,8 @@ app = Flask(__name__)
 
 # URL de la base de datos
 # mongo_url = "mongodb://localhost:27017"
-mongo_url = "mongodb://djongo:dj0ng0@24.232.132.26:27015/?authMechanism=DEFAULT&authSource=djongo"
+# mongo_url = "mongodb://djongo:dj0ng0@24.232.132.26:27015/?authMechanism=DEFAULT&authSource=djongo"
+mongo_url = "mongodb://roberto:sanchez@150.136.250.71:27017/"
 files_base_url = "http://localhost:5000/files"
 files_db = "djongo"
 event_db = "djongo"
@@ -118,6 +119,77 @@ def event_rfid():
     return ret
 
 
+@app.route("/event/movimiento", methods=['POST'])
+def event_movimiento():
+    print("Llego un request del sensor de movimiento!")
+
+
+    # Obtengo la IP de la request
+    remote_ip = request.remote_addr
+
+    # Llamo a la funcion para obtener el id de dispositivo
+    # a partir de la IP
+    db.connect()
+    # Recibo un documento/dict
+    document = db.get_device_by_ip(devices_collection='devices_device', ip=remote_ip)
+    if document is None:
+        ret = {'msg': 'Error con el dispositivo'}
+        print(ret)
+        return ret, 401
+
+    # Preguntar por el timezone del detector de movimiento
+
+    # Extraer la hora actual y formatearla como viene begin y end con fecha de 1900-01-01.
+    # Se puede comparar las horas con < y > si la fecha es la misma.
+    now = dt.now()
+    current_time = dt.strptime(f'1900-01-01 {now.strftime("%H:%M:%S")}', "%Y-%j-%d %H:%M:%S")
+    # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, se busca en la base
+    # y se extraen los parametros para comparar
+    timezone_doc = db.get_timezone_by_id('events_movementtimezone', 1)  # tiene ID siempre 1
+    begin = timezone_doc['begin']
+    end = timezone_doc['end']
+
+    # Pura magia:
+    # La zona horaria puede empezar un dia y terminar en otro, por ejemplo 22 a 8.
+    # Entonces hay dos casos, si esta en el mismo dia o no.
+    # Si no esta en el mismo dia, hay que ver si la hora actual esta en el dia de
+    # begin, si no esta se le suma un dia. Y a end se le suma un dia siempre.
+    ret = {'msg': 'Dentro de la zona horaria de la deteccion de movimiento'}
+    if begin < end:
+        if begin < current_time < end:
+            print(ret)
+    elif begin > end:
+        if current_time < begin:
+            current_time = current_time + datetime.timedelta(days=1)
+        if begin < current_time < end + datetime.timedelta(days=1):
+            print(ret)
+        print(f"{begin} {current_time} {end} ")
+    else:
+        ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
+        print(ret)
+        return ret, 401
+
+    # Obtener la foto
+    port = document['port']
+    r = None
+    for picture in range(3):
+        r = requests.get(url=f"http://{remote_ip}:{port}/single")
+    # Guardar la foto
+    if r is not None:
+        file_data = db.insert_file(r.content)
+
+    # Guardar evento con la referencia del archivo que se guardo
+    event = {
+        "id": str(file_data['id']),
+        "date_time": dt.isoformat(dt.now()),
+        "image": f"{files_base_url}/{file_data['filename']}",
+        "device_id": document['id']
+    }
+    db.insert_event(event_collection='events_movement', event_content=event)
+    print(document['id'])
+    return str(document['id'])
+
+
 @app.route("/event/timbre", methods=['POST'])
 def event_timbre():
     print("Llego un request!")
@@ -198,8 +270,6 @@ def video_recorder():
     seconds = request.args.get('seconds', default=10, type=int)
     device_url = request.args.get('url', type=str)
     filename = f'{dt.isoformat(dt.now())}.avi'
-
-
 
     client = ImageClient(url=f"{device_url}/single")
     fps = client.get_images(tiempo=seconds)
