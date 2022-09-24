@@ -1,4 +1,5 @@
 import datetime
+import os
 
 from flask import Flask, send_file, request
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
@@ -15,10 +16,10 @@ app = Flask(__name__)
 # URL de la base de datos
 # mongo_url = "mongodb://localhost:27017"
 # mongo_url = "mongodb://djongo:dj0ng0@24.232.132.26:27015/?authMechanism=DEFAULT&authSource=djongo"
-mongo_url = "mongodb://roberto:sanchez@150.136.250.71:27017/"
-files_base_url = "http://localhost:5000/files"
-files_db = "djongo"
-event_db = "djongo"
+mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@150.136.250.71:27017/")
+# files_base_url = "http://localhost:5000/files"
+files_db = os.getenv('FILES_DB', "djongo")
+event_db = os.getenv('EVENT_DB', "djongo")
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
@@ -94,13 +95,14 @@ def event_rfid():
             "id": str(file_data['id']),
             "date_time": dt.isoformat(dt.now()),
             "user_id": user_document['id'],
-            "image": f"{files_base_url}/{file_data['filename']}",
+            "image": f"{file_data['filename']}",
             "device_id": device_document['id']
             }
-        if begin < end:
+        if begin <= end:
             if (begin < current_time < end or timezone_id == 1) \
                     and bool(user_document['is_active']):
-                # Permiso otorgado
+                print('Permiso otorgado')
+
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
                 requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
@@ -115,18 +117,17 @@ def event_rfid():
                 requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
 
     else:
-        # Permiso denegado
+        print('Permiso denegado')
         event = {
             "id": str(file_data['id']),
             "date_time": dt.isoformat(dt.now()),
-            "image": f"{files_base_url}/{file_data['filename']}",
+            "image": f"{file_data['filename']}",
             "device_id": device_id
             }
         db.insert_event(event_collection='events_deniedaccess', event_content=event)
-        print("PERMISO DENEGADO")
 
     ret = {
-        "msg": "Acceso permitido"
+        "msg": "Se genero un evento!"
     }
     return ret
 
@@ -194,7 +195,7 @@ def event_movimiento():
     event = {
         "id": str(file_data['id']),
         "date_time": dt.isoformat(dt.now()),
-        "image": f"{files_base_url}/{file_data['filename']}",
+        "image": f"{file_data['filename']}",
         "device_id": document['id']
     }
     db.insert_event(event_collection='events_movement', event_content=event)
@@ -230,7 +231,7 @@ def event_timbre():
     event = {
         "id": str(file_data['id']),
         "date_time": dt.isoformat(dt.now()),
-        "image": f"{files_base_url}/{file_data['filename']}",
+        "image": f"{file_data['filename']}",
         "device_id": document['id']
     }
     db.insert_event(event_collection='events_button', event_content=event)
@@ -262,7 +263,7 @@ def event_webbutton():
         "id": str(file_data['id']),
         "date_time": dt.isoformat(dt.now()),
         "user_id": user_id,
-        "image": f"{files_base_url}/{file_data['filename']}",
+        "image": f"{file_data['filename']}",
         "device_id": device_id
     }
     db.insert_event(event_collection='events_webopendoor', event_content=event)
