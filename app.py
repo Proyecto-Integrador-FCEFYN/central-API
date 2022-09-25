@@ -5,8 +5,6 @@ from flask import Flask, send_file, request
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt
-import json
-import pprint
 import requests
 
 # cfg = None
@@ -135,7 +133,6 @@ def event_rfid():
 @app.route("/event/movimiento", methods=['POST'])
 def event_movimiento():
     print("Llego un request del sensor de movimiento!")
-
 
     # Obtengo la IP de la request
     remote_ip = request.remote_addr
@@ -309,27 +306,8 @@ def download_file(filename):
     return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
 
 
-@app.route('/testupload/<string:event_type>/<string:filename>')
-def get_event_picture(event_type, filename):
-    # db = DatabaseConnection(conn_string=mongo_url)
-    db.connect_local()
-    db.save_event_file(filename, 'tesis')
-    # data = db.load_event_file('2022-07-21-19:13:45.763157.avi,'
-    #                           'tesis')
-    # return data
-    ret = {
-        "id": str(filename),
-        "filename": filename,
-        "seconds": event_type,
-        "msg": "A file was saved into db!"
-    }
-    return ret
-
-
 @app.route('/files/<string:filename>')
 def save_event_picture(filename):
-    # db = DatabaseConnection(connection_string=mongo_url)
-    # db.connect_local()
     db.connect()
     data = db.load_event_file(filename, files_db)
     # return send_file(data, mimetype='image/jpg')
@@ -365,9 +343,3 @@ def download_file_by_dict():
     return send_file(f"videos/{document.filename}", download_name=document.filename, as_attachment=True)
 
 
-@app.before_first_request
-def load_json():
-    with open("config.json") as json_data_file:
-        data = json.load(json_data_file)
-    pprint.pprint(data)
-    return data

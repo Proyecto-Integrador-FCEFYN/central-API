@@ -1,12 +1,9 @@
 import uuid
-
 import cv2
 import os
 import requests as r
 import time
-from datetime import datetime
 from pymongo import MongoClient
-from pymongo.server_api import ServerApi
 from bson.binary import Binary
 import gridfs
 
