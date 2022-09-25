@@ -10,8 +10,8 @@ import gridfs
 
 class ImageToVideo:
 
-    def __init__(self, video_path):
-        self.video = video_path
+    def __init__(self, filename):
+        self.filename = filename
 
     def video_from_images(self, fps):
         image_folder = 'images'
@@ -22,13 +22,21 @@ class ImageToVideo:
         frame = cv2.imread(os.path.join(image_folder, images[0]))
         height, width, layers = frame.shape
 
-        video = cv2.VideoWriter(f'videos/{self.video}', 0, fps, (width, height))
+        video = cv2.VideoWriter(f'videos/{self.filename}', 0, fps, (width, height))
 
         for image in images:
             video.write(cv2.imread(os.path.join(image_folder, image)))
 
         cv2.destroyAllWindows()
         video.release()
+
+    def video_from_images2(self, fps):
+        image_folder = 'images'
+        images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
+        images.sort()
+        # os.system(f"ffmpeg -r {fps} -i images/%d.jpg -vcodec mpeg4 -y videos/{self.filename}")
+        os.system(f"ffmpeg -an -i images/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/1.4} -y videos/{self.filename}")
+        print(f"Converti el archivo {self.filename}!")
 
 
 def clean_images():
@@ -49,9 +57,9 @@ class ImageClient:
         while time.time() < timestamp_salida:
             response = r.get(url=self.url, stream=True)
             images_array.append(response.content)
-            cantidad += 1
         for image in images_array:
-            f = open(f'images/{time.time()}.jpg', "wb")
+            f = open(f'images/{cantidad}.jpg', "wb")
+            cantidad += 1
             f.write(image)
             f.close()
         print(f'cant frames= {cantidad}, seg={tiempo}, fps={cantidad / tiempo}')
@@ -89,14 +97,20 @@ class DatabaseConnection:
     def connect_local(self):
         self.client = MongoClient(self.conn_string)
 
-    def save_to_db_grid(self, filename):
-        db = self.client['tesis']
+    def insert_video(self, filename):
+        db = self.client[self.files_db]
         fs = gridfs.GridFS(db)
         with open(f'videos/{filename}', "rb") as f:
             encoded = Binary(f.read())
         file_id = fs.put(data=encoded, filename=filename)
         print(f'the file with id: {file_id} has been saved')
-        return file_id
+        ret = {
+            "id": file_id,
+            "filename": f"{filename}",
+            "uuid": filename,
+            "msg": "The file has been saved!"
+        }
+        return ret
 
     def load_from_db_grid(self, filename):
         db = self.client['tesis']
@@ -137,21 +151,11 @@ class DatabaseConnection:
         binary_data = document.read()
         print(f" El archivo {document.filename} ha sido encontrado")
         return Binary(binary_data)
-        # return document
-
-    def save_event_file(self, filename, database='eventos'):
-        db = self.client[database]
-        fs = gridfs.GridFS(db)
-        with open(f'test.png', "rb") as f:
-            encoded = Binary(f.read())
-        file_id = fs.put(data=encoded, filename=filename)
-        print(f'the file with id: {file_id} has been saved')
-        return file_id
 
     # Se pasa el payload del archivo, que seria la foto
     # que vino por mqtt.
     # Devuelve el nombre del archivo asignado.
-    def insert_file(self, payload):
+    def insert_image(self, payload):
         filename = str(uuid.uuid4())
         db = self.client[self.files_db]
         fs = gridfs.GridFS(db)

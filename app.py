@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from flask import Flask, send_file, request
+from flask import Flask, send_file, request, make_response
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt
@@ -18,6 +18,7 @@ mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@150.136.250.71:270
 # files_base_url = "http://localhost:5000/files"
 files_db = os.getenv('FILES_DB', "djongo")
 event_db = os.getenv('EVENT_DB', "djongo")
+tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
@@ -81,7 +82,7 @@ def event_rfid():
             r = requests.get(url=f"http://{remote_ip}:{port}/single")
         # Guardar la foto
         if r is not None:
-            file_data = db.insert_file(r.content)
+            file_data = db.insert_image(r.content)
 
     # Condiciones para el permiso:
     #   1. Que este en la franja horaria correcta
@@ -179,14 +180,25 @@ def event_movimiento():
         print(ret)
         return ret, 401
 
-    # Obtener la foto
+    # Obtener el video
     port = document['port']
-    r = None
-    for picture in range(3):
-        r = requests.get(url=f"http://{remote_ip}:{port}/single")
-    # Guardar la foto
-    if r is not None:
-        file_data = db.insert_file(r.content)
+
+    # Este nombre es el que tendra el video final en el filesystem
+    filename = f'{dt.isoformat(dt.now())}.mp4'
+    # Obtener las imagenes y traerlos al filesystem local
+    client = ImageClient(url=f"http://{remote_ip}:{port}/single")
+    fps = client.get_images(tiempo=tiempo_videos)
+    # Convertir las imagenes en video
+    video_converter = ImageToVideo(filename=filename)
+    # video_converter.video_from_images(fps=fps)
+    video_converter.video_from_images2(fps=fps)
+
+    # Guardar el video
+    file_data = db.insert_video(filename=filename)
+    clean_images()
+    clean_videos()
+    if file_data is None:
+        return {'msg': 'Error en el guardado del video'}, 500
 
     # Guardar evento con la referencia del archivo que se guardo
     event = {
@@ -195,9 +207,9 @@ def event_movimiento():
         "image": f"{file_data['filename']}",
         "device_id": document['id']
     }
-    db.insert_event(event_collection='events_movement', event_content=event)
-    print(document['id'])
-    return str(document['id'])
+    ret = db.insert_event(event_collection='events_movement', event_content=event)
+    # print(ret)
+    return {'msg': 'Evento guardado satisfactoriamente'}, 200
 
 
 @app.route("/event/timbre", methods=['POST'])
@@ -222,7 +234,7 @@ def event_timbre():
         r = requests.get(url=f"http://{remote_ip}:{port}/single")
     # Guardar la foto
     if r is not None:
-        file_data = db.insert_file(r.content)
+        file_data = db.insert_image(r.content)
 
     # Guardar evento con la referencia del archivo que se guardo
     event = {
@@ -252,7 +264,7 @@ def event_webbutton():
 
     # Tercero guardar la foto
     db.connect()
-    file_data = db.insert_file(r.content)
+    file_data = db.insert_image(r.content)
 
     # Cuarto guardar evento con la referencia del archivo que se guardo
 
@@ -283,11 +295,11 @@ def video_recorder():
 
     client = ImageClient(url=f"{device_url}/single")
     fps = client.get_images(tiempo=seconds)
-    video_converter = ImageToVideo(video_path=filename)
+    video_converter = ImageToVideo(filename=filename)
     video_converter.video_from_images(fps=fps)
     clean_images()
     # db = DatabaseConnection(connection_string=mongo_url)
-    file_id = db.save_to_db_grid(filename)
+    file_id = db.insert_video(filename)
     ret = {
         "id": str(file_id),
         "filename": filename,
@@ -310,8 +322,14 @@ def download_file(filename):
 def save_event_picture(filename):
     db.connect()
     data = db.load_event_file(filename, files_db)
+    response = make_response(data)
+    if str(filename).endswith('.jpg'):
+        response.headers.set('Content-Type', 'image/jpeg')
+    elif str(filename).endswith('.mp4'):
+        response.headers.set('Content-Type', 'video/mp4')
+
     # return send_file(data, mimetype='image/jpg')
-    return data
+    return response
 
 
 @app.route('/search')
