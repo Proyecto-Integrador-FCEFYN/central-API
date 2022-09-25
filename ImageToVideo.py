@@ -1,34 +1,18 @@
+import datetime
 import uuid
-import cv2
 import os
 import requests as r
 import time
 from pymongo import MongoClient
 from bson.binary import Binary
 import gridfs
+from datetime import datetime as dt
 
 
 class ImageToVideo:
 
     def __init__(self, filename):
         self.filename = filename
-
-    def video_from_images(self, fps):
-        image_folder = 'images'
-        # video_name = 'video.avi'
-
-        images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
-        images.sort()
-        frame = cv2.imread(os.path.join(image_folder, images[0]))
-        height, width, layers = frame.shape
-
-        video = cv2.VideoWriter(f'videos/{self.filename}', 0, fps, (width, height))
-
-        for image in images:
-            video.write(cv2.imread(os.path.join(image_folder, image)))
-
-        cv2.destroyAllWindows()
-        video.release()
 
     def video_from_images2(self, fps):
         image_folder = 'images'
@@ -208,3 +192,19 @@ class DatabaseConnection:
             }
         )
         return document
+
+    def get_events_duration(self, collection: str) -> dict:
+        db = self.client[self.event_db]
+        collection = db[collection]
+        document = collection.find_one({"id": 1})
+        return document
+
+    def delete_events_duration(self, collection: str, duration: datetime) -> str:
+        db = self.client[self.event_db]
+        collection = db[collection]
+        res = collection.delete_many(
+            {
+               'date_time': {'$lt': dt.isoformat(duration)}
+            })
+        print(res.raw_result)
+        return res.raw_result

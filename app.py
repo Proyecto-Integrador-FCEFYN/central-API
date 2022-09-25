@@ -1,11 +1,12 @@
-import datetime
+# import datetime
 import os
 
 from flask import Flask, send_file, request, make_response
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 import requests
+from utils import Schedule
 
 # cfg = None
 app = Flask(__name__)
@@ -21,6 +22,8 @@ event_db = os.getenv('EVENT_DB', "djongo")
 tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
+
+schedule = Schedule(collection='events_eventsduration', db=db)
 
 
 @app.route("/event/rfid", methods=['POST'])
@@ -107,8 +110,8 @@ def event_rfid():
                 requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
         elif begin > end:
             if current_time < begin:
-                current_time = current_time + datetime.timedelta(days=1)
-            if (begin < current_time < end + datetime.timedelta(days=1) or timezone_id == 1) \
+                current_time = current_time + timedelta(days=1)
+            if (begin < current_time < end + timedelta(days=1) or timezone_id == 1) \
                     and bool(user_document['is_active']):
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
@@ -171,8 +174,8 @@ def event_movimiento():
             print(ret)
     elif begin > end:
         if current_time < begin:
-            current_time = current_time + datetime.timedelta(days=1)
-        if begin < current_time < end + datetime.timedelta(days=1):
+            current_time = current_time + timedelta(days=1)
+        if begin < current_time < end + timedelta(days=1):
             print(ret)
         print(f"{begin} {current_time} {end} ")
     else:
@@ -285,28 +288,28 @@ def event_webbutton():
     }, 200
 
 
-@app.route("/record/")
-def video_recorder():
-
-    db.connect()
-    seconds = request.args.get('seconds', default=10, type=int)
-    device_url = request.args.get('url', type=str)
-    filename = f'{dt.isoformat(dt.now())}.avi'
-
-    client = ImageClient(url=f"{device_url}/single")
-    fps = client.get_images(tiempo=seconds)
-    video_converter = ImageToVideo(filename=filename)
-    video_converter.video_from_images(fps=fps)
-    clean_images()
-    # db = DatabaseConnection(connection_string=mongo_url)
-    file_id = db.insert_video(filename)
-    ret = {
-        "id": str(file_id),
-        "filename": filename,
-        "seconds": seconds,
-        "msg": "A video was recorded!"
-    }
-    return ret
+# @app.route("/record/")
+# def video_recorder():
+#
+#     db.connect()
+#     seconds = request.args.get('seconds', default=10, type=int)
+#     device_url = request.args.get('url', type=str)
+#     filename = f'{dt.isoformat(dt.now())}.avi'
+#
+#     client = ImageClient(url=f"{device_url}/single")
+#     fps = client.get_images(tiempo=seconds)
+#     video_converter = ImageToVideo(filename=filename)
+#     video_converter.video_from_images(fps=fps)
+#     clean_images()
+#     # db = DatabaseConnection(connection_string=mongo_url)
+#     file_id = db.insert_video(filename)
+#     ret = {
+#         "id": str(file_id),
+#         "filename": filename,
+#         "seconds": seconds,
+#         "msg": "A video was recorded!"
+#     }
+#     return ret
 
 
 @app.route('/download/<string:filename>')
@@ -356,8 +359,6 @@ def download_file_by_dict():
     if document == FileNotFoundError:
         return {
             'msg': "No file was found",
-            'timestamp': datetime.datetime.now()
+            'timestamp': dt.now()
         }
     return send_file(f"videos/{document.filename}", download_name=document.filename, as_attachment=True)
-
-
