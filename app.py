@@ -23,7 +23,7 @@ tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
-schedule = Schedule(collection='events_eventsduration', db=db)
+# schedule = Schedule(collection='events_eventsduration', db=db)
 
 
 @app.route("/event/rfid", methods=['POST'])
