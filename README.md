@@ -5,10 +5,14 @@
 Copiar certificados para MongoDB en ./config
 
 ## COMANDOS
-
-http://localhost:5000/download/<filename>
-
-http://localhost:5000/record/<segundos>
+```bash
+git clone git@github.com:Proyecto-Integrador-FCEFYN/central-API.git
+cd central-API
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m flask run --host=0.0.0.0 --port=5000
+```
 
 ## REQUERIMIENTOS
 
