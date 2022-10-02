@@ -1,7 +1,7 @@
 # import datetime
 import os
 
-from flask import Flask, send_file, request, make_response
+from flask import Flask, send_file, request, make_response, Response
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
@@ -362,3 +362,29 @@ def download_file_by_dict():
             'timestamp': dt.now()
         }
     return send_file(f"videos/{document.filename}", download_name=document.filename, as_attachment=True)
+
+
+def gen(host, port, duracion):
+    duracion = dt.now() + timedelta(seconds=int(duracion))
+    # mientras el tiempo actual sea menor que el parametro
+    while dt.now() < duracion:
+        r = requests.get(url=f"http://{host}:{port}/single")
+        frame = r.content
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+
+@app.route('/streaming', methods=['GET'])
+def pasamano():
+    duracion = request.args.get('duracion')
+    host = request.args.get('host')
+    port = request.args.get('port')
+
+    if port is None or host is None or duracion is None:
+        return {
+            'msg': 'Error en los parametros',
+            'params': [duracion, host, port]
+        }, 400
+
+    return Response(gen(host=host, port=port, duracion=duracion),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
