@@ -1,30 +1,30 @@
-# import datetime
 import os
+import pathlib
 
 from flask import Flask, send_file, request, make_response, Response
+from werkzeug.utils import secure_filename
+
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
 import requests
-from utils import Schedule
 
-# cfg = None
 app = Flask(__name__)
+UPLOAD_FOLDER = 'certs'
+ALLOWED_EXTENSIONS = {'pem'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # URL de la base de datos
-# mongo_url = "mongodb://localhost:27017"
-# mongo_url = "mongodb://djongo:dj0ng0@24.232.132.26:27015/?authMechanism=DEFAULT&authSource=djongo"
 mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@150.136.250.71:27017/")
-# files_base_url = "http://localhost:5000/files"
 files_db = os.getenv('FILES_DB', "djongo")
 event_db = os.getenv('EVENT_DB', "djongo")
 tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
+cert_path = os.getenv('CERT_PATH', 'certs/cacert.pem')
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
-# schedule = Schedule(collection='events_eventsduration', db=db)
-
+current_path = pathlib.Path(__file__).parent.resolve()
 
 @app.route("/event/rfid", methods=['POST'])
 def event_rfid():
@@ -82,7 +82,8 @@ def event_rfid():
         device_id = device_document['id']
         r = None
         for picture in range(3):
-            r = requests.get(url=f"http://{remote_ip}:{port}/single")
+            r = requests.get(url=f"https://{remote_ip}:{port}/single",
+                             verify=f'{current_path}/certs/{remote_ip}.pem')
         # Guardar la foto
         if r is not None:
             file_data = db.insert_image(r.content)
@@ -107,7 +108,8 @@ def event_rfid():
 
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+                requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
+                             verify=f'{current_path}/certs/{remote_ip}.pem')
         elif begin > end:
             if current_time < begin:
                 current_time = current_time + timedelta(days=1)
@@ -116,7 +118,8 @@ def event_rfid():
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"http://{remote_ip}:{device_document['port']}/cerradura")
+                requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
+                             verify=f'{current_path}/certs/{remote_ip}.pem')
 
     else:
         print('Permiso denegado')
@@ -189,7 +192,8 @@ def event_movimiento():
     # Este nombre es el que tendra el video final en el filesystem
     filename = f'{dt.isoformat(dt.now())}.mp4'
     # Obtener las imagenes y traerlos al filesystem local
-    client = ImageClient(url=f"http://{remote_ip}:{port}/single")
+    client = ImageClient(url=f"https://{remote_ip}:{port}/single",
+                         verify=f'{current_path}/certs/{remote_ip}.pem')
     fps = client.get_images(tiempo=tiempo_videos)
     # Convertir las imagenes en video
     video_converter = ImageToVideo(filename=filename)
@@ -234,7 +238,8 @@ def event_timbre():
     port = document['port']
     r = None
     for picture in range(3):
-        r = requests.get(url=f"http://{remote_ip}:{port}/single")
+        r = requests.get(url=f"https://{remote_ip}:{port}/single",
+                         verify=f'{current_path}/certs/{remote_ip}.pem')
     # Guardar la foto
     if r is not None:
         file_data = db.insert_image(r.content)
@@ -263,7 +268,8 @@ def event_webbutton():
 
     # Segundo obtener la foto
     for picture in range(5):
-        r = requests.get(url=f"http://{host}:{port}/single")
+        r = requests.get(url=f"https://{host}:{port}/single",
+                         verify=f'{current_path}/certs/{host}.pem')
 
     # Tercero guardar la foto
     db.connect()
@@ -281,41 +287,18 @@ def event_webbutton():
     db.insert_event(event_collection='events_webopendoor', event_content=event)
 
     # Quinto abro la puerta
-    requests.get(url=f"http://{host}:{port}/cerradura")
+    requests.get(url=f"https://{host}:{port}/cerradura",
+                 verify=f'{current_path}/certs/{host}.pem')
 
     return {
         "msg": "Event registered"
     }, 200
 
-
-# @app.route("/record/")
-# def video_recorder():
-#
-#     db.connect()
-#     seconds = request.args.get('seconds', default=10, type=int)
-#     device_url = request.args.get('url', type=str)
-#     filename = f'{dt.isoformat(dt.now())}.avi'
-#
-#     client = ImageClient(url=f"{device_url}/single")
-#     fps = client.get_images(tiempo=seconds)
-#     video_converter = ImageToVideo(filename=filename)
-#     video_converter.video_from_images(fps=fps)
-#     clean_images()
-#     # db = DatabaseConnection(connection_string=mongo_url)
-#     file_id = db.insert_video(filename)
-#     ret = {
-#         "id": str(file_id),
-#         "filename": filename,
-#         "seconds": seconds,
-#         "msg": "A video was recorded!"
-#     }
-#     return ret
-
-
+# TODO: DELETE ME
 @app.route('/download/<string:filename>')
 def download_file(filename):
     # db = DatabaseConnection(connection_string=mongo_url)
-    clean_videos()
+    # clean_videos()
     db.connect()
     db.load_from_db_grid(filename)
     return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
@@ -330,8 +313,6 @@ def save_event_picture(filename):
         response.headers.set('Content-Type', 'image/jpeg')
     elif str(filename).endswith('.mp4'):
         response.headers.set('Content-Type', 'video/mp4')
-
-    # return send_file(data, mimetype='image/jpg')
     return response
 
 
@@ -351,24 +332,26 @@ def download_file_by_dict():
     if _length is not None:
         my_dict['length'] = _length
 
-    # db = DatabaseConnection(connection_string=mongo_url)
-    clean_videos()
     db.connect()
-
     document = db.load_from_db_dict(my_dict)
     if document == FileNotFoundError:
         return {
             'msg': "No file was found",
             'timestamp': dt.now()
         }
-    return send_file(f"videos/{document.filename}", download_name=document.filename, as_attachment=True)
+
+    resp = make_response(document)
+    resp.headers['Content-Type'] = 'text/plain;charset=UTF-8'
+    resp.headers['Content-Disposition'] = f'attachment;filename={_filename}'
+    return resp
 
 
 def gen(host, port, duracion):
     duracion = dt.now() + timedelta(seconds=int(duracion))
     # mientras el tiempo actual sea menor que el parametro
     while dt.now() < duracion:
-        r = requests.get(url=f"http://{host}:{port}/single")
+        r = requests.get(url=f"https://{host}:{port}/single",
+                         verify=f'{current_path}/certs/{host}.pem')
         frame = r.content
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
@@ -388,3 +371,37 @@ def pasamano():
 
     return Response(gen(host=host, port=port, duracion=duracion),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/test')
+def test():
+
+    r = requests.get(url='https://192.168.1.140/single',
+                     verify=f'certs/{request.remote_addr}.pem')
+    # r = requests.get(url='https://192.168.1.140/', verify='/home/agustin/esp/blink-monitor/main/certs/cacert.pem')
+    print(r.text)
+    return r.text
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/upload_cert', methods=['POST'])
+def upload_file():
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        return {'mgs': 'No file part in request'}, 401
+    file = request.files['file']
+    data = file.stream.read()
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        return {'msg': 'No selected file!!'}, 401
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        db.connect()
+        db.insert_file(data, filename)
+        return {'msg': 'File uploaded'}

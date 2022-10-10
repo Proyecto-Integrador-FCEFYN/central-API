@@ -3,7 +3,7 @@ import uuid
 import os
 import requests as r
 import time
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from bson.binary import Binary
 import gridfs
 from datetime import datetime as dt
@@ -111,19 +111,15 @@ class DatabaseConnection:
         print(f" El archivo {document.filename} ha sido guardado")
 
     def load_from_db_dict(self, search_dict):
-        db = self.client['tesis']
+        db = self.client[self.files_db]
         # collection = db['files']
         fs = gridfs.GridFS(db)
-        document = fs.find_one(search_dict)
+        document = fs.find_one(search_dict, sort=[('uploadDate', DESCENDING)])
         if document is None:
             return FileNotFoundError
         print(f'Se encontro un archivo con nombre: {document.filename}')
         binary_data = document.read()
-        with open(f'videos/{document.filename}', "wb") as f:
-            data = Binary(binary_data)
-            f.write(data)
-        print(f" El archivo {document.filename} ha sido guardado")
-        return document
+        return binary_data
 
     def load_event_file(self, filename, database='files'):
         db = self.client[database]
@@ -149,6 +145,20 @@ class DatabaseConnection:
             "id": file_id,
             "filename": f"{filename}.jpg",
             "uuid": filename,
+            "msg": "The file has been saved!"
+        }
+        return ret
+
+    def insert_file(self, payload, my_filename):
+        # filename = str(uuid.uuid4())
+        db = self.client[self.files_db]
+        fs = gridfs.GridFS(db)
+        encoded = Binary(payload)
+        file_id = fs.put(data=encoded, filename=my_filename, uuid=my_filename)
+        ret = {
+            "id": file_id,
+            "filename": my_filename,
+            "uuid": my_filename,
             "msg": "The file has been saved!"
         }
         return ret
