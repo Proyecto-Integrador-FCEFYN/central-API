@@ -34,12 +34,13 @@ class ImageClient:
     def __init__(self, url):
         self.url = url
 
-    def get_images(self, tiempo):
+    def get_images(self, tiempo, verify_path):
         images_array = []
         cantidad = 0  # cantidad de frames
         timestamp_salida = time.time() + tiempo
         while time.time() < timestamp_salida:
-            response = r.get(url=self.url, stream=True)
+            response = r.get(url=self.url, stream=True,
+                             verify=verify_path)
             images_array.append(response.content)
         for image in images_array:
             f = open(f'images/{cantidad}.jpg', "wb")
@@ -218,3 +219,13 @@ class DatabaseConnection:
             })
         print(res.raw_result)
         return res.raw_result
+
+    def get_cert_content(self, collection, device_ip):
+        db = self.client[self.event_db]
+        collection = db[collection]
+        document = collection.find_one({"ip_address": device_ip})
+        if document is not None:
+            return document
+        else:
+            return {'msg': 'Not found'}
+

@@ -1,8 +1,8 @@
 import os
-import pathlib
+import tempfile
 
 from flask import Flask, send_file, request, make_response, Response
-from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
@@ -10,8 +10,10 @@ from datetime import datetime as dt, timedelta
 import requests
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+)
 UPLOAD_FOLDER = 'certs'
-ALLOWED_EXTENSIONS = {'pem'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
@@ -24,9 +26,8 @@ cert_path = os.getenv('CERT_PATH', 'certs/cacert.pem')
 
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
-current_path = pathlib.Path(__file__).parent.resolve()
 
-@app.route("/event/rfid", methods=['POST'])
+@app.route("api/v1/event/rfid", methods=['POST'])
 def event_rfid():
     print("Llego un request de RFID")
     now = dt.now()
@@ -76,14 +77,17 @@ def event_rfid():
     # Obtener dispositivo a partir de la ip de la request
     remote_ip = request.remote_addr
     device_document = db.get_device_by_ip(devices_collection='devices_device', ip=remote_ip)
+    # Obtener certificado
+    tmp_file = get_file_cert(remote_ip)
     if device_document is not None:
         # Obtener la foto
         port = device_document['port']
         device_id = device_document['id']
         r = None
-        for picture in range(3):
+        for picture in range(2):
             r = requests.get(url=f"https://{remote_ip}:{port}/single",
-                             verify=f'{current_path}/certs/{remote_ip}.pem')
+                             verify=tmp_file.name)
+
         # Guardar la foto
         if r is not None:
             file_data = db.insert_image(r.content)
@@ -109,7 +113,7 @@ def event_rfid():
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
                 requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
-                             verify=f'{current_path}/certs/{remote_ip}.pem')
+                             verify=tmp_file)
         elif begin > end:
             if current_time < begin:
                 current_time = current_time + timedelta(days=1)
@@ -119,8 +123,7 @@ def event_rfid():
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
                 requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
-                             verify=f'{current_path}/certs/{remote_ip}.pem')
-
+                             verify=tmp_file)
     else:
         print('Permiso denegado')
         event = {
@@ -130,14 +133,14 @@ def event_rfid():
             "device_id": device_id
             }
         db.insert_event(event_collection='events_deniedaccess', event_content=event)
-
+    tmp_file.close()
     ret = {
         "msg": "Se genero un evento!"
     }
     return ret
 
 
-@app.route("/event/movimiento", methods=['POST'])
+@app.route("api/v1/event/movimiento", methods=['POST'])
 def event_movimiento():
     print("Llego un request del sensor de movimiento!")
 
@@ -191,10 +194,12 @@ def event_movimiento():
 
     # Este nombre es el que tendra el video final en el filesystem
     filename = f'{dt.isoformat(dt.now())}.mp4'
+    # Obtener certificado
+    tmp_file = get_file_cert(remote_ip)
     # Obtener las imagenes y traerlos al filesystem local
-    client = ImageClient(url=f"https://{remote_ip}:{port}/single",
-                         verify=f'{current_path}/certs/{remote_ip}.pem')
-    fps = client.get_images(tiempo=tiempo_videos)
+    client = ImageClient(url=f"https://{remote_ip}:{port}/single")
+    fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file)
+    tmp_file.close()
     # Convertir las imagenes en video
     video_converter = ImageToVideo(filename=filename)
     # video_converter.video_from_images(fps=fps)
@@ -219,7 +224,7 @@ def event_movimiento():
     return {'msg': 'Evento guardado satisfactoriamente'}, 200
 
 
-@app.route("/event/timbre", methods=['POST'])
+@app.route("/api/v1/event/timbre", methods=['POST'])
 def event_timbre():
     print("Llego un request!")
 
@@ -234,12 +239,16 @@ def event_timbre():
     if document is None:
         return {'msg': 'Error con el dispositivo'}, 401
 
+    # Obtener archivo certificado
+    tmp_file = get_file_cert(ip_address=remote_ip)
     # Obtener la foto
     port = document['port']
     r = None
-    for picture in range(3):
+    for picture in range(2):
         r = requests.get(url=f"https://{remote_ip}:{port}/single",
-                         verify=f'{current_path}/certs/{remote_ip}.pem')
+                         verify=tmp_file.name)
+    tmp_file.close()
+
     # Guardar la foto
     if r is not None:
         file_data = db.insert_image(r.content)
@@ -256,7 +265,7 @@ def event_timbre():
     return str(document['id'])
 
 
-@app.route("/event/webbutton", methods=['POST'])
+@app.route("api/v1/event/webbutton", methods=['POST'])
 def event_webbutton():
     # Primero obtengo parametros de request
     host = request.json['host']
@@ -265,11 +274,12 @@ def event_webbutton():
     device_id = request.json['device_id']
 
     print(f"{host} {port} {user_id} {device_id}")
-
+    # Obtener certificado
+    tmp_file = get_file_cert(ip_address=host)
     # Segundo obtener la foto
-    for picture in range(5):
+    for picture in range(2):
         r = requests.get(url=f"https://{host}:{port}/single",
-                         verify=f'{current_path}/certs/{host}.pem')
+                         verify=tmp_file)
 
     # Tercero guardar la foto
     db.connect()
@@ -288,23 +298,23 @@ def event_webbutton():
 
     # Quinto abro la puerta
     requests.get(url=f"https://{host}:{port}/cerradura",
-                 verify=f'{current_path}/certs/{host}.pem')
-
+                 verify=tmp_file)
+    tmp_file.close()
     return {
         "msg": "Event registered"
     }, 200
 
 # TODO: DELETE ME
-@app.route('/download/<string:filename>')
-def download_file(filename):
-    # db = DatabaseConnection(connection_string=mongo_url)
-    # clean_videos()
-    db.connect()
-    db.load_from_db_grid(filename)
-    return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
+# @app.route('/download/<string:filename>')
+# def download_file(filename):
+#     # db = DatabaseConnection(connection_string=mongo_url)
+#     # clean_videos()
+#     db.connect()
+#     db.load_from_db_grid(filename)
+#     return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
 
 
-@app.route('/files/<string:filename>')
+@app.route('/api/v1/files/<string:filename>')
 def save_event_picture(filename):
     db.connect()
     data = db.load_event_file(filename, files_db)
@@ -316,7 +326,7 @@ def save_event_picture(filename):
     return response
 
 
-@app.route('/search')
+@app.route('/api/v1/search')
 def download_file_by_dict():
     my_dict = {}
     _id = request.args.get('id')
@@ -347,17 +357,21 @@ def download_file_by_dict():
 
 
 def gen(host, port, duracion):
+    # Obtener certificado
+    tmp_file = get_file_cert(host)
+
     duracion = dt.now() + timedelta(seconds=int(duracion))
     # mientras el tiempo actual sea menor que el parametro
     while dt.now() < duracion:
         r = requests.get(url=f"https://{host}:{port}/single",
-                         verify=f'{current_path}/certs/{host}.pem')
+                         verify=tmp_file)
         frame = r.content
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    tmp_file.close()
 
 
-@app.route('/streaming', methods=['GET'])
+@app.route('/api/v1/streaming', methods=['GET'])
 def pasamano():
     duracion = request.args.get('duracion')
     host = request.args.get('host')
@@ -373,35 +387,36 @@ def pasamano():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-@app.route('/test')
+@app.route('/api/v1/test')
 def test():
+    return {
+        'msg': 'This a is great test!'
+    }
 
-    r = requests.get(url='https://192.168.1.140/single',
-                     verify=f'certs/{request.remote_addr}.pem')
-    # r = requests.get(url='https://192.168.1.140/', verify='/home/agustin/esp/blink-monitor/main/certs/cacert.pem')
-    print(r.text)
-    return r.text
+# TODO: Delete me
+# @app.route('/upload_cert', methods=['POST'])
+# def upload_file():
+#     # check if the post request has the file part
+#     if 'file' not in request.files:
+#         return {'mgs': 'No file part in request'}, 401
+#     file = request.files['file']
+#     data = file.stream.read()
+#     # If the user does not select a file, the browser submits an
+#     # empty file without a filename.
+#     if file.filename == '':
+#         return {'msg': 'No selected file!!'}, 401
+#     if file and allowed_file(file.filename):
+#         filename = secure_filename(file.filename)
+#         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+#         db.connect()
+#         db.insert_file(data, filename)
+#         return {'msg': 'File uploaded'}
 
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-@app.route('/upload_cert', methods=['POST'])
-def upload_file():
-    # check if the post request has the file part
-    if 'file' not in request.files:
-        return {'mgs': 'No file part in request'}, 401
-    file = request.files['file']
-    data = file.stream.read()
-    # If the user does not select a file, the browser submits an
-    # empty file without a filename.
-    if file.filename == '':
-        return {'msg': 'No selected file!!'}, 401
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        db.connect()
-        db.insert_file(data, filename)
-        return {'msg': 'File uploaded'}
+def get_file_cert(ip_address: str):
+    tmp = tempfile.NamedTemporaryFile(mode='w')
+    doc = db.get_cert_content(collection='devices_device', device_ip=ip_address)
+    cert_str = doc['cert']
+    tmp.write(cert_str)
+    tmp.seek(0)
+    return tmp

@@ -20,3 +20,9 @@ python -m flask run --host=0.0.0.0 --port=5000
 sudo apt update
 sudo apt install -y ffmpeg
 ```
+
+### Para levantar con gunicorn:
+Esto deberia estar en dockerfile y apuntarlo con el nginx
+```bash
+gunicorn -w 4 -b localhost:6000 'app:app'
+```
