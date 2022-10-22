@@ -27,7 +27,7 @@ cert_path = os.getenv('CERT_PATH', 'certs/cacert.pem')
 db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event_db)
 
 
-@app.route("api/v1/event/rfid", methods=['POST'])
+@app.route("/api/v1/event/rfid", methods=['POST'])
 def event_rfid():
     print("Llego un request de RFID")
     now = dt.now()
@@ -113,7 +113,7 @@ def event_rfid():
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
                 requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
-                             verify=tmp_file)
+                             verify=tmp_file.name)
         elif begin > end:
             if current_time < begin:
                 current_time = current_time + timedelta(days=1)
@@ -123,7 +123,7 @@ def event_rfid():
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
                 requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
-                             verify=tmp_file)
+                             verify=tmp_file.name)
     else:
         print('Permiso denegado')
         event = {
@@ -140,7 +140,7 @@ def event_rfid():
     return ret
 
 
-@app.route("api/v1/event/movimiento", methods=['POST'])
+@app.route("/api/v1/event/movimiento", methods=['POST'])
 def event_movimiento():
     print("Llego un request del sensor de movimiento!")
 
@@ -198,7 +198,7 @@ def event_movimiento():
     tmp_file = get_file_cert(remote_ip)
     # Obtener las imagenes y traerlos al filesystem local
     client = ImageClient(url=f"https://{remote_ip}:{port}/single")
-    fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file)
+    fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file.name)
     tmp_file.close()
     # Convertir las imagenes en video
     video_converter = ImageToVideo(filename=filename)
@@ -265,7 +265,7 @@ def event_timbre():
     return str(document['id'])
 
 
-@app.route("api/v1/event/webbutton", methods=['POST'])
+@app.route("/api/v1/event/webbutton", methods=['POST'])
 def event_webbutton():
     # Primero obtengo parametros de request
     host = request.json['host']
@@ -279,7 +279,7 @@ def event_webbutton():
     # Segundo obtener la foto
     for picture in range(2):
         r = requests.get(url=f"https://{host}:{port}/single",
-                         verify=tmp_file)
+                         verify=tmp_file.name)
 
     # Tercero guardar la foto
     db.connect()
@@ -298,7 +298,7 @@ def event_webbutton():
 
     # Quinto abro la puerta
     requests.get(url=f"https://{host}:{port}/cerradura",
-                 verify=tmp_file)
+                 verify=tmp_file.name)
     tmp_file.close()
     return {
         "msg": "Event registered"
@@ -358,17 +358,18 @@ def download_file_by_dict():
 
 def gen(host, port, duracion):
     # Obtener certificado
+    db.connect()
     tmp_file = get_file_cert(host)
-
     duracion = dt.now() + timedelta(seconds=int(duracion))
     # mientras el tiempo actual sea menor que el parametro
+    s = requests.Session()
     while dt.now() < duracion:
-        r = requests.get(url=f"https://{host}:{port}/single",
-                         verify=tmp_file)
+        r = s.get(url=f"https://{host}:{port}/single", verify=tmp_file.name)
         frame = r.content
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     tmp_file.close()
+    s.close()
 
 
 @app.route('/api/v1/streaming', methods=['GET'])

@@ -1,6 +1,8 @@
 import datetime
 import uuid
 import os
+
+import requests
 import requests as r
 import time
 from pymongo import MongoClient, DESCENDING
@@ -38,10 +40,12 @@ class ImageClient:
         images_array = []
         cantidad = 0  # cantidad de frames
         timestamp_salida = time.time() + tiempo
+        s = r.Session()
         while time.time() < timestamp_salida:
-            response = r.get(url=self.url, stream=True,
-                             verify=verify_path)
+            response = s.get(url=self.url, stream=True,
+                             verify=verify_path.name)
             images_array.append(response.content)
+        s.close()
         for image in images_array:
             f = open(f'images/{cantidad}.jpg', "wb")
             cantidad += 1
