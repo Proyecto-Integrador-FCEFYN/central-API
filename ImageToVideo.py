@@ -2,7 +2,6 @@ import datetime
 import uuid
 import os
 
-import requests
 import requests as r
 import time
 from pymongo import MongoClient, DESCENDING
@@ -13,28 +12,31 @@ from datetime import datetime as dt
 
 class ImageToVideo:
 
-    def __init__(self, filename):
+    def __init__(self, filename, folder_name):
         self.filename = filename
+        self.folder_name = folder_name
 
     def video_from_images2(self, fps):
-        image_folder = 'images'
-        images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
+        if not os.path.exists(self.folder_name):
+            return {'msg': 'No se pudo crear el directorio para la conversion'}
+        images = [img for img in os.listdir(self.folder_name) if img.endswith(".jpg")]
         images.sort()
-        # os.system(f"ffmpeg -r {fps} -i images/%d.jpg -vcodec mpeg4 -y videos/{self.filename}")
-        os.system(f"ffmpeg -an -i images/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/1.4} -y videos/{self.filename}")
+        os.system(f"ffmpeg -an -i {self.folder_name}/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/1.4} -y videos/{self.filename}")
         print(f"Converti el archivo {self.filename}!")
 
 
-def clean_images():
-    images = [img for img in os.listdir('images')]
+def clean_images(folder_name):
+    images = [img for img in os.listdir(folder_name)]
     for path in images:
-        os.remove(f'images/{path}')
+        os.remove(f'{folder_name}/{path}')
+    os.removedirs(folder_name)
 
 
 class ImageClient:
 
-    def __init__(self, url):
+    def __init__(self, url, folder_name):
         self.url = url
+        self.folder_name = folder_name
 
     def get_images(self, tiempo, verify_path):
         images_array = []
@@ -46,8 +48,9 @@ class ImageClient:
                              verify=verify_path.name)
             images_array.append(response.content)
         s.close()
+        os.makedirs(self.folder_name, exist_ok=True)
         for image in images_array:
-            f = open(f'images/{cantidad}.jpg', "wb")
+            f = open(f'{self.folder_name}/{cantidad}.jpg', "wb")
             cantidad += 1
             f.write(image)
             f.close()
@@ -232,4 +235,3 @@ class DatabaseConnection:
             return document
         else:
             return {'msg': 'Not found'}
-

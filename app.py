@@ -1,5 +1,6 @@
 import os
 import tempfile
+import uuid
 
 from flask import Flask, send_file, request, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -194,20 +195,21 @@ def event_movimiento():
 
     # Este nombre es el que tendra el video final en el filesystem
     filename = f'{dt.isoformat(dt.now())}.mp4'
+    # Nombre de carpeta unica de cada solicitud
+    folder_name = str(uuid.uuid4())
     # Obtener certificado
     tmp_file = get_file_cert(remote_ip)
     # Obtener las imagenes y traerlos al filesystem local
-    client = ImageClient(url=f"https://{remote_ip}:{port}/single")
+    client = ImageClient(url=f"https://{remote_ip}:{port}/single", folder_name=folder_name)
     fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file.name)
     tmp_file.close()
     # Convertir las imagenes en video
-    video_converter = ImageToVideo(filename=filename)
-    # video_converter.video_from_images(fps=fps)
+    video_converter = ImageToVideo(filename=filename, folder_name=folder_name)
     video_converter.video_from_images2(fps=fps)
 
     # Guardar el video
     file_data = db.insert_video(filename=filename)
-    clean_images()
+    clean_images(folder_name=folder_name)
     clean_videos()
     if file_data is None:
         return {'msg': 'Error en el guardado del video'}, 500
