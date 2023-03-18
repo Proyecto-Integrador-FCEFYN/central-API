@@ -9,6 +9,7 @@ from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_vi
 from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
 import requests
+import timbre
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(
@@ -229,6 +230,7 @@ def event_movimiento():
 @app.route("/api/v1/event/timbre", methods=['POST'])
 def event_timbre():
     print("Llego un request!")
+    timbre.sonar()
 
     # Obtengo la IP de la request
     remote_ip = request.remote_addr
@@ -306,14 +308,6 @@ def event_webbutton():
         "msg": "Event registered"
     }, 200
 
-# TODO: DELETE ME
-# @app.route('/download/<string:filename>')
-# def download_file(filename):
-#     # db = DatabaseConnection(connection_string=mongo_url)
-#     # clean_videos()
-#     db.connect()
-#     db.load_from_db_grid(filename)
-#     return send_file(f"videos/{filename}", download_name=filename, as_attachment=True)
 
 
 @app.route('/api/v1/files/<string:filename>')
@@ -396,24 +390,6 @@ def test():
         'msg': 'This a is great test!'
     }
 
-# TODO: Delete me
-# @app.route('/upload_cert', methods=['POST'])
-# def upload_file():
-#     # check if the post request has the file part
-#     if 'file' not in request.files:
-#         return {'mgs': 'No file part in request'}, 401
-#     file = request.files['file']
-#     data = file.stream.read()
-#     # If the user does not select a file, the browser submits an
-#     # empty file without a filename.
-#     if file.filename == '':
-#         return {'msg': 'No selected file!!'}, 401
-#     if file and allowed_file(file.filename):
-#         filename = secure_filename(file.filename)
-#         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-#         db.connect()
-#         db.insert_file(data, filename)
-#         return {'msg': 'File uploaded'}
 
 
 def get_file_cert(ip_address: str):

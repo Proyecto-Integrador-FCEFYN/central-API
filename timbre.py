@@ -25,5 +25,4 @@ def sonar():
         sleep(.20)
     pi_pwm.stop()
 
-sonar()
 
