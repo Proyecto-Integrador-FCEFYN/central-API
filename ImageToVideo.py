@@ -17,11 +17,13 @@ class ImageToVideo:
         self.folder_name = folder_name
 
     def video_from_images2(self, fps):
+        if not os.path.exists('videos'):
+            os.makedirs('videos')
         if not os.path.exists(self.folder_name):
             return {'msg': 'No se pudo crear el directorio para la conversion'}
         images = [img for img in os.listdir(self.folder_name) if img.endswith(".jpg")]
         images.sort()
-        os.system(f"ffmpeg -an -i {self.folder_name}/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/1.4} -y videos/{self.filename}")
+        os.system(f"ffmpeg -an -i {self.folder_name}/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/2} -y videos/{self.filename}")
         print(f"Converti el archivo {self.filename}!")
 
 
@@ -45,7 +47,7 @@ class ImageClient:
         s = r.Session()
         while time.time() < timestamp_salida:
             response = s.get(url=self.url, stream=True,
-                             verify=verify_path.name)
+                             verify=verify_path)
             images_array.append(response.content)
         s.close()
         os.makedirs(self.folder_name, exist_ok=True)
