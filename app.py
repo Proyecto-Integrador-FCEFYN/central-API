@@ -85,6 +85,9 @@ def event_rfid():
         # Obtener la foto
         port = device_document['port']
         device_id = device_document['id']
+        usuario = device_document['usuario']
+        password = device_document['password']
+        
         r = None
         for picture in range(2):
             r = requests.get(url=f"https://{remote_ip}:{port}/single",
@@ -114,7 +117,7 @@ def event_rfid():
 
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
         elif begin > end:
             if current_time < begin:
@@ -124,7 +127,7 @@ def event_rfid():
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
     else:
         print('Permiso denegado')
@@ -276,7 +279,10 @@ def event_webbutton():
     port = request.json['port']
     user_id = request.json['user_id']
     device_id = request.json['device_id']
+    usuario_esp = request.json['usuario']
+    password_esp = request.json['password']
 
+    db.connect()
     print(f"{host} {port} {user_id} {device_id}")
     # Obtener certificado
     tmp_file = get_file_cert(ip_address=host)
@@ -286,7 +292,6 @@ def event_webbutton():
                          verify=tmp_file.name)
 
     # Tercero guardar la foto
-    db.connect()
     file_data = db.insert_image(r.content)
 
     # Cuarto guardar evento con la referencia del archivo que se guardo
@@ -301,7 +306,7 @@ def event_webbutton():
     db.insert_event(event_collection='events_webopendoor', event_content=event)
 
     # Quinto abro la puerta
-    requests.get(url=f"https://{host}:{port}/cerradura",
+    requests.get(url=f"https://{usuario_esp}:{password_esp}@{host}:{port}/cerradura",
                  verify=tmp_file.name)
     tmp_file.close()
     return {
