@@ -326,6 +326,30 @@ def save_event_picture(filename):
         response.headers.set('Content-Type', 'video/mp4')
     return response
 
+@app.route('/api/v1/rfid', methods=['POST'])
+def get_current_rfid():
+    print("Llego una requestde rfid!")
+    # Obtengo la IP
+    host = request.json['host']
+    port = request.json['port']
+    usuario_esp = request.json['usuario']
+    password_esp = request.json['password']
+    # Llamo a la funcion para obtener el id de dispositivo
+    # a partir de la IP
+    db.connect()
+    tmp_file = get_file_cert(ip_address=host)
+    # Recibo un documento/dict
+    document = db.get_device_by_ip(devices_collection='devices_device', ip=host)
+    if document is None:
+        return {'msg': 'Error con el dispositivo'}, 500
+   # Quinto abro la puerta
+    r =requests.get(url=f"https://{usuario_esp}:{password_esp}@{host}:{port}/register_rfid",
+                 verify=tmp_file.name)
+    tmp_file.close()
+    return {
+        "rfid": str(r.text)
+    }, 200
+
 
 @app.route('/api/v1/search')
 def download_file_by_dict():
