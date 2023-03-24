@@ -20,7 +20,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # URL de la base de datos
-mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@150.136.250.71:27017/")
+mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@localhost:27017/")
 files_db = os.getenv('FILES_DB', "djongo")
 event_db = os.getenv('EVENT_DB', "djongo")
 tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
@@ -68,7 +68,7 @@ def event_rfid():
         else:
             return {
                 "msg": f"Error con la weekday y timezone {weekday}"
-            }, 401
+            }, 404
 
         # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, se busca en la base
         # y se extraen los parametros para comparar
@@ -160,7 +160,7 @@ def event_movimiento():
     if document is None:
         ret = {'msg': 'Error con el dispositivo'}
         print(ret)
-        return ret, 401
+        return ret, 404
 
     # Preguntar por el timezone del detector de movimiento
 
@@ -192,7 +192,7 @@ def event_movimiento():
     else:
         ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
         print(ret)
-        return ret, 401
+        return ret, 404
 
     # Obtener el video
     port = document['port']
@@ -244,7 +244,7 @@ def event_timbre():
     # Recibo un documento/dict
     document = db.get_device_by_ip(devices_collection='devices_device', ip=remote_ip)
     if document is None:
-        return {'msg': 'Error con el dispositivo'}, 401
+        return {'msg': 'Error con el dispositivo'}, 404
 
     # Obtener archivo certificado
     tmp_file = get_file_cert(ip_address=remote_ip)
