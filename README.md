@@ -5,6 +5,7 @@
 Copiar certificados para MongoDB en ./config
 
 ## COMANDOS
+
 ```bash
 git clone git@github.com:Proyecto-Integrador-FCEFYN/central-API.git
 cd central-API
@@ -22,7 +23,9 @@ sudo apt install -y ffmpeg
 ```
 
 ### Para levantar con gunicorn:
+
 Esto deberia estar en dockerfile y apuntarlo con el nginx
+
 ```bash
-gunicorn -w 4 -b localhost:6000 'app:app'
+gunicorn -w 4 -b localhost:5000 'app:app'
 ```
