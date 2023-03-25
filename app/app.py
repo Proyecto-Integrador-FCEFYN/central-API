@@ -5,11 +5,11 @@ import uuid
 from flask import Flask, send_file, request, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
+from app.ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
 import requests
-import timbre
+import app.timbre as timbre
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(
@@ -20,7 +20,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # URL de la base de datos
-mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@localhost:27017/")
+mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@192.168.24.120:27017/")
 files_db = os.getenv('FILES_DB', "djongo")
 event_db = os.getenv('EVENT_DB', "djongo")
 tiempo_videos = os.getenv('TIEMPO_VIDEOS', 10)
@@ -212,7 +212,8 @@ def event_movimiento():
     video_converter.video_from_images2(fps=fps)
 
     # Guardar el video
-    file_data = db.insert_video(filename=filename)
+    if os.path.exists(f"videos/{filename}.mp4"):
+        file_data = db.insert_video(filename=filename)
     clean_images(folder_name=folder_name)
     clean_videos()
     if file_data is None:
