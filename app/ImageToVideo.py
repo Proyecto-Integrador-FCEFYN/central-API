@@ -1,6 +1,7 @@
 import datetime
 import uuid
 import os
+import imageio.v2 as imageio
 
 import requests as r
 import time
@@ -23,8 +24,31 @@ class ImageToVideo:
             return {'msg': 'No se pudo crear el directorio para la conversion'}
         images = [img for img in os.listdir(self.folder_name) if img.endswith(".jpg")]
         images.sort()
-        os.system(f"ffmpeg -an -i {self.folder_name}/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -r {fps/2} -y videos/{self.filename}")
-        print(f"Converti el archivo {self.filename}!")
+        # -crf is Constant Rate Factor
+        # -pix_fmt yuv420p is for Apple Quicktime support
+        os.system(f"ffmpeg -an -i {self.folder_name}/%d.jpg -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -crf {fps/2} -y videos/{self.filename}")
+        for wait in range(10):
+            if not os.path.exists(f"videos/{self.filename}"):
+                print("Esperando que se genere el video...")
+                time.sleep(1)
+            else: 
+                print(f"Converti el archivo {self.filename}!")
+                return True
+        return False
+    
+    def make_animation(self, fps):
+        png_dir = self.folder_name
+        images = []
+        for file_name in sorted(os.listdir(png_dir)):
+            if file_name.endswith('.jpg'):
+                file_path = os.path.join(png_dir, file_name)
+                images.append(imageio.imread(file_path))
+
+        # Make it pause at the end so that the viewers can ponder
+        for _ in range(10):
+            images.append(imageio.imread(file_path))
+
+        imageio.mimsave(f"videos/{self.filename}", images, fps=fps)
 
 
 def clean_images(folder_name):
@@ -137,7 +161,7 @@ class DatabaseConnection:
         document = fs.find_one({
             "filename": filename
         })
-        print(document)
+        # print(document)
         binary_data = document.read()
         print(f" El archivo {document.filename} ha sido encontrado")
         return Binary(binary_data)

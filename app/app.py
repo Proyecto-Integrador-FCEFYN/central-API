@@ -198,7 +198,8 @@ def event_movimiento():
     port = document['port']
 
     # Este nombre es el que tendra el video final en el filesystem
-    filename = f'{dt.isoformat(dt.now())}.mp4'
+    # filename = f'{str(uuid.uuid4())}.mp4'
+    filename = f'{str(uuid.uuid4())}.gif'
     # Nombre de carpeta unica de cada solicitud
     folder_name = str(uuid.uuid4())
     # Obtener certificado
@@ -207,13 +208,19 @@ def event_movimiento():
     client = ImageClient(url=f"https://{remote_ip}:{port}/single", folder_name=folder_name)
     fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file.name)
     tmp_file.close()
+    
     # Convertir las imagenes en video
     video_converter = ImageToVideo(filename=filename, folder_name=folder_name)
-    video_converter.video_from_images2(fps=fps)
-
+    # if not video_converter.video_from_images2(fps=fps):
+    #     ret = {'msg': 'Error con la generacion del video'}
+    #     print(ret)
+    #     clean_images(folder_name=folder_name)
+    #     clean_videos()
+    #     return ret, 500
+    video_converter.make_animation(fps=fps)
+    
     # Guardar el video
-    if os.path.exists(f"videos/{filename}.mp4"):
-        file_data = db.insert_video(filename=filename)
+    file_data = db.insert_video(filename=filename)
     clean_images(folder_name=folder_name)
     clean_videos()
     if file_data is None:
@@ -275,6 +282,7 @@ def event_timbre():
 
 @app.route("/api/v1/event/webbutton", methods=['POST'])
 def event_webbutton():
+    print("Evento webbutton!")
     # Primero obtengo parametros de request
     host = request.json['host']
     port = request.json['port']
@@ -325,6 +333,8 @@ def save_event_picture(filename):
         response.headers.set('Content-Type', 'image/jpeg')
     elif str(filename).endswith('.mp4'):
         response.headers.set('Content-Type', 'video/mp4')
+    elif str(filename).endswith('.gif'):
+        response.headers.set('Content-Type', 'image/gif')
     return response
 
 @app.route('/api/v1/rfid', methods=['POST'])
