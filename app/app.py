@@ -91,7 +91,9 @@ def event_rfid():
         r = None
         for picture in range(2):
             r = requests.get(url=f"https://{remote_ip}:{port}/single",
-                             verify=tmp_file.name)
+                             verify=tmp_file.name,
+                             timeout=2)
+                            
 
         # Guardar la foto
         if r is not None:
