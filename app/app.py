@@ -6,7 +6,8 @@ from flask import Flask, send_file, request, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flasgger import Swagger
 
-from app.ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
+from app.ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection
+from app.ImageToVideo import clean_videos, clean_images
 from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
 import requests
@@ -36,9 +37,9 @@ def event_rfid():
     """
     Maneja los eventos de RFID.
 
-    Este endpoint maneja los eventos de RFID. Recibe los datos del evento desde un dispositivo RFID,
-    consulta la base de datos para verificar los permisos del usuario y guarda los eventos en la base
-    de datos.
+    Este endpoint maneja los eventos de RFID. Recibe los datos del evento desde un 
+    dispositivo RFID, consulta la base de datos para verificar los permisos del 
+    usuario y guarda los eventos en la base de datos.
 
     ---
     responses:
