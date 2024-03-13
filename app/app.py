@@ -134,8 +134,7 @@ def event_rfid():
 
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{usuario}:{password}@
-                             {remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
         elif begin > end:
             if current_time < begin:
