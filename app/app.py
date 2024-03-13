@@ -144,8 +144,7 @@ def event_rfid():
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{usuario}:{password}@
-                             {remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
     else:
         print('Permiso denegado')
