@@ -86,8 +86,8 @@ def event_rfid():
                 "msg": f"Error con la weekday y timezone {weekday}"
             }, 404
 
-        # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, se busca en la base
-        # y se extraen los parametros para comparar
+        # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, 
+        # se busca en la base y se extraen los parametros para comparar
         timezone_doc = db.get_timezone_by_id('users_timezone', timezone_id)
         begin = timezone_doc['begin']
         end = timezone_doc['end']
@@ -134,7 +134,8 @@ def event_rfid():
 
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@
+                             {remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
         elif begin > end:
             if current_time < begin:
@@ -144,7 +145,8 @@ def event_rfid():
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
-                requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
+                requests.get(url=f"https://{usuario}:{password}@
+                             {remote_ip}:{device_document['port']}/cerradura",
                              verify=tmp_file.name)
     else:
         print('Permiso denegado')
@@ -167,7 +169,8 @@ def event_movimiento():
     """
     Maneja los eventos de movimiento.
 
-    Este endpoint recibe datos de eventos de movimiento, procesa la solicitud y realiza acciones según los datos recibidos.
+    Este endpoint recibe datos de eventos de movimiento, procesa la solicitud y realiza 
+    acciones según los datos recibidos.
 
     ---
     tags:
@@ -209,8 +212,8 @@ def event_movimiento():
     # Se puede comparar las horas con < y > si la fecha es la misma.
     now = dt.now()
     current_time = dt.strptime(f'1900-01-01 {now.strftime("%H:%M:%S")}', "%Y-%j-%d %H:%M:%S")
-    # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, se busca en la base
-    # y se extraen los parametros para comparar
+    # Una vez obtenida la zona horaria correspondiente al dia de la semana actual, 
+    # se busca en la base y se extraen los parametros para comparar
     timezone_doc = db.get_timezone_by_id('events_movementtimezone', 1)  # tiene ID siempre 1
     begin = timezone_doc['begin']
     end = timezone_doc['end']
