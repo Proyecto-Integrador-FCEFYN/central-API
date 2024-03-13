@@ -4,6 +4,7 @@ import uuid
 
 from flask import Flask, send_file, request, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flasgger import Swagger
 
 from app.ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection, clean_videos, clean_images
 from bson.objectid import ObjectId
@@ -18,6 +19,7 @@ app.wsgi_app = ProxyFix(
 UPLOAD_FOLDER = 'certs'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+swagger = Swagger(app)
 
 # URL de la base de datos
 mongo_url = os.getenv('MONGO_URL', "mongodb://roberto:sanchez@192.168.24.120:27017/")
@@ -31,6 +33,20 @@ db = DatabaseConnection(conn_string=mongo_url, files_db=files_db, event_db=event
 
 @app.route("/api/v1/event/rfid", methods=['POST'])
 def event_rfid():
+    """
+    Maneja los eventos de RFID.
+
+    Este endpoint maneja los eventos de RFID. Recibe los datos del evento desde un dispositivo RFID,
+    consulta la base de datos para verificar los permisos del usuario y guarda los eventos en la base
+    de datos.
+
+    ---
+    responses:
+      200:
+        description: Se generó un evento correctamente.
+      404:
+        description: No se encontraron datos válidos en la solicitud.
+    """
     print("Llego un request de RFID")
     now = dt.now()
     db.connect()
@@ -87,13 +103,12 @@ def event_rfid():
         device_id = device_document['id']
         usuario = device_document['usuario']
         password = device_document['password']
-        
+
         r = None
         for picture in range(2):
             r = requests.get(url=f"https://{remote_ip}:{port}/single",
                              verify=tmp_file.name,
                              timeout=2)
-                            
 
         # Guardar la foto
         if r is not None:
@@ -111,7 +126,7 @@ def event_rfid():
             "user_id": user_document['id'],
             "image": f"{file_data['filename']}",
             "device_id": device_document['id']
-            }
+        }
         if begin <= end:
             if (begin < current_time < end or timezone_id == 1) \
                     and bool(user_document['is_active']):
@@ -138,7 +153,7 @@ def event_rfid():
             "date_time": dt.isoformat(dt.now()),
             "image": f"{file_data['filename']}",
             "device_id": device_id
-            }
+        }
         db.insert_event(event_collection='events_deniedaccess', event_content=event)
     tmp_file.close()
     ret = {
@@ -146,10 +161,34 @@ def event_rfid():
     }
     return ret
 
-
 @app.route("/api/v1/event/movimiento", methods=['POST'])
 def event_movimiento():
     print("Llego un request del sensor de movimiento!")
+    """
+    Maneja los eventos de movimiento.
+
+    Este endpoint recibe datos de eventos de movimiento, procesa la solicitud y realiza acciones según los datos recibidos.
+
+    ---
+    tags:
+      - Eventos
+    parameters:
+      - name: data
+        in: body
+        description: Datos de evento de movimiento
+        required: true
+        schema:
+          type: object
+          properties:
+            ip:
+              type: string
+              description: Dirección IP del dispositivo de detección de movimiento.
+    responses:
+      200:
+        description: Se generó un evento de movimiento.
+      404:
+        description: Error en la solicitud.
+    """
 
     # Obtengo la IP de la request
     remote_ip = request.remote_addr
