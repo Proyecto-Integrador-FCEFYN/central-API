@@ -10,3 +10,5 @@ gunicorn==20.1.0
 pyuwsgi
 RPi.GPIO~=0.7.1
 imageio~=2.27.0
+Flask-Swagger-UI
+flasgger
