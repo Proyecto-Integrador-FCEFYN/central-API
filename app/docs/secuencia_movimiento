@@ -1,0 +1,44 @@
+@startuml
+participant Client as "ESP32"
+participant App as "Flask App"
+database DB as "Database"
+Client -> App: POST /api/v1/event/movimiento\n(data: {ip})
+activate App
+App -> DB: Connect
+activate DB
+DB --> App: Connection established
+deactivate DB
+App -> DB: Get device by IP\n(devices_collection='devices_device', ip=remote_ip)
+activate DB
+DB --> App: Document
+deactivate DB
+alt Document is None
+    App -> Client: Return {'msg': 'Error con el dispositivo'}, 404
+else
+    App -> App: Get current time
+    App -> DB: Get timezone by ID\n('events_movementtimezone', 1)
+    activate DB
+    DB --> App: Timezone document
+    deactivate DB
+    alt Certificate is not None
+        App -> DB: Get certificate file\n(ip=remote_ip)
+        activate DB
+        DB --> App: Certificate file
+        deactivate DB
+    else
+        App -> Client: Return {'msg': 'Error obteniendo certificado'}, 404
+    end
+    App -> App: Get video port
+    App -> Client: Get images\n(url=f"https://{remote_ip}:{port}/single", folder_name=folder_name)
+    App -> App: Convert images to video
+    App -> DB: Insert video\n(filename=filename)
+    activate DB
+    DB --> App: File data
+    deactivate DB
+    App -> DB: Insert event\n(event_collection='events_movement', event_content=event)
+    activate DB
+    DB --> App: Event inserted
+    deactivate DB
+    App -> Client: Return {'msg': 'Evento guardado satisfactoriamente'}, 200
+end
+@enduml

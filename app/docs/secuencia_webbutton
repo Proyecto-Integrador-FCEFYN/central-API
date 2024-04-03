@@ -1,0 +1,21 @@
+@startuml
+participant Client as "Django"
+participant API as "API-Central"
+participant requests as "ESP32"
+Client -> API: POST /api/v1/event/webbutton
+API -> API: Obtain parameters from request
+API -> DB: get_file_cert(ip_address=host)
+DB --> API: Certificate file
+
+loop for picture in range(2)
+    API -> requests: GET /single
+    requests --> API: Photo response
+end loop
+API -> DB: Insert photo into database
+DB --> API: Insertion confirmation
+API -> DB: Insert event into events_webopendoor
+DB ---> API: Event insertion confirmation
+API -> requests: GET /cerradura
+requests --> API: Door opening response
+API -> Client: Response 200, {"msg": "Event registered"}
+@enduml

@@ -1,0 +1,20 @@
+@startuml
+participant "Django-app" as Cliente
+participant "API-central" as API_Central
+participant "ESP32-CAM" as Camara
+
+Cliente -> API_Central: Realiza una solicitud GET a /api/v1/streaming
+activate API_Central
+API_Central -> API_Central: Procesa la solicitud y verifica los parámetros
+API_Central -> Camara: Establece una conexión con el ESP32-CAM utilizando HTTPS
+activate Camara
+Camara --> API_Central: Inicia la transmisión de video
+loop Transmisión de video
+    Camara --> API_Central: Envía frames de video
+    API_Central --> Cliente: Reenvía los frames de video
+end
+Camara --> API_Central: Finaliza la transmisión y cierra la conexión
+
+deactivate Camara
+deactivate API_Central
+@enduml

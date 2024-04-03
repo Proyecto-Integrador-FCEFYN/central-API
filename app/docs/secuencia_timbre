@@ -1,0 +1,53 @@
+@startuml
+
+
+participant "ESP32-CAM" as ESP32
+participant "API-central" as API
+
+participant "DB-connector" as conn
+database "MongoDB" as DB
+
+ESP32 -> API: Realiza una solicitud POST a /api/v1/event/timbre
+activate API
+
+API -> API: RPI.timbre.sonar()
+
+API -> API: Obtener la IP de la request
+
+API -> conn: Conectarse a la base de datos
+activate conn
+conn -> DB: Obtener el dispositivo por IP
+activate DB
+DB -> DB: find_one({ip})
+alt Dispositivo encontrado
+    DB --> conn: Retorna el documento del dispositivo
+    conn --> API: documento
+    deactivate conn
+    deactivate DB
+    API -> API: Obtener certificado del\n documento del dispositivo
+    API -> ESP32: obtener foto\nhttps://{remote_ip}:{port}/single
+    activate ESP32 
+    ESP32 --> API: image.jpg
+    deactivate ESP32
+    API -> conn: Guardar la foto en la base de datos
+    activate conn
+    conn -> DB: put(image)
+    activate DB
+    DB --> conn: object_id
+    deactivate DB
+    conn --> API: return
+    API -> conn: Guardar evento con referencia a la imagen
+    conn -> DB: insert_one(event)
+    activate DB
+    DB --> conn: object_id
+    deactivate DB
+    conn --> API: return
+    deactivate conn
+    
+    API -> ESP32: Retorna el ID del dispositivo
+else Dispositivo no encontrado
+    API -> ESP32: Retorna un mensaje de error
+end
+
+deactivate API
+@enduml
