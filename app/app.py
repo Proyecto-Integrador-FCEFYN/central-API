@@ -48,6 +48,7 @@ def event_rfid():
 
     if user_document is not None:
         is_active = bool(user_document['is_active'])
+        is_staff = bool(user_document['is_staff'])
 
         # Calcular el dia de la semana y averiguar contra que ID hay que comparar
         weekday = now.isoweekday()
@@ -87,7 +88,7 @@ def event_rfid():
         device_id = device_document['id']
         usuario = device_document['usuario']
         password = device_document['password']
-        
+
         r = None
         for picture in range(2):
             r = requests.get(url=f"https://{remote_ip}:{port}/single",
@@ -102,6 +103,7 @@ def event_rfid():
     #   2. Que el usuario este activo
     #   3. Que haya un usuario con el rfid que llego
     #   4. Que haya un dispositivo cargado con la ip de la request
+    #   5. Que sea admin (is_staff)
     if user_document is not None and device_document is not None:
         event = {
             "id": str(file_data['id']),
@@ -110,9 +112,16 @@ def event_rfid():
             "image": f"{file_data['filename']}",
             "device_id": device_document['id']
             }
-        if begin <= end:
-            if (begin < current_time < end or timezone_id == 1) \
-                    and bool(user_document['is_active']):
+        if is_staff:
+            # Si es admin, no tiene begin ni end. Tiene permitido el acceso en todo horario.
+            print('Admin detectado, permiso otorgado')
+            db.insert_event(event_collection='events_permittedaccess', event_content=event)
+            # Abro la puerta
+            requests.get(url=f"https://{usuario}:{password}@{remote_ip}:{device_document['port']}/cerradura",
+                         verify=tmp_file.name)
+        elif begin <= end:
+            if (begin < current_time < end) \
+                    and is_active:
                 print('Permiso otorgado')
 
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
@@ -122,8 +131,8 @@ def event_rfid():
         elif begin > end:
             if current_time < begin:
                 current_time = current_time + timedelta(days=1)
-            if (begin < current_time < end + timedelta(days=1) or timezone_id == 1) \
-                    and bool(user_document['is_active']):
+            if (begin < current_time < end + timedelta(days=1)) \
+                    and is_active:
                 # Permiso otorgado
                 db.insert_event(event_collection='events_permittedaccess', event_content=event)
                 # Abro la puerta
