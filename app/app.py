@@ -10,6 +10,8 @@ from bson.objectid import ObjectId
 from datetime import datetime as dt, timedelta
 import requests
 import app.timbre as timbre
+from apscheduler.schedulers.background import BackgroundScheduler
+from dateutil.relativedelta import relativedelta
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(
@@ -439,8 +441,6 @@ def test():
         'msg': 'This a is great test!'
     }
 
-
-
 def get_file_cert(ip_address: str):
     tmp = tempfile.NamedTemporaryFile(mode='w')
     doc = db.get_cert_content(collection='devices_device', device_ip=ip_address)
@@ -448,3 +448,37 @@ def get_file_cert(ip_address: str):
     tmp.write(cert_str)
     tmp.seek(0)
     return tmp
+
+
+def limpiar_eventos_antiguos():
+    # Obtener la duración de los eventos de la base de datos
+    db.connect()
+    duracion_eventos = db.get_events_duration()
+
+    # Calcular la fecha límite para los eventos antiguos
+    fecha_limite = calcular_fecha_limite(duracion_eventos)
+    # Borrar eventos antiguos en cada colección
+    db.borrar_eventos_antiguos(fecha_limite)
+
+
+def calcular_fecha_limite(duracion_eventos):
+    # Obtener el año y el mes de la duración de los eventos
+    year = duracion_eventos['year']
+    month = duracion_eventos['month']
+
+    # Calcular la fecha actual
+    fecha_actual = dt.now()
+
+    # Calcular la fecha límite utilizando relativedelta
+    fecha_limite = fecha_actual - relativedelta(years=year, months=month)
+
+    return fecha_limite
+
+# Crear un objeto scheduler
+scheduler = BackgroundScheduler()
+
+# Programar la tarea de limpieza de eventos para que se ejecute cada día a las 2:00 AM
+scheduler.add_job(limpiar_eventos_antiguos, 'cron', hour=2)
+
+# Iniciar el scheduler
+scheduler.start()

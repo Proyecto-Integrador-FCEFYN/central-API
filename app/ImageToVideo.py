@@ -237,21 +237,6 @@ class DatabaseConnection:
         )
         return document
 
-    def get_events_duration(self, collection: str) -> dict:
-        db = self.client[self.event_db]
-        collection = db[collection]
-        document = collection.find_one({"id": 1})
-        return document
-
-    def delete_events_duration(self, collection: str, duration: datetime) -> str:
-        db = self.client[self.event_db]
-        collection = db[collection]
-        res = collection.delete_many(
-            {
-               'date_time': {'$lt': dt.isoformat(duration)}
-            })
-        print(res.raw_result)
-        return res.raw_result
 
     def get_cert_content(self, collection, device_ip):
         db = self.client[self.event_db]
@@ -261,3 +246,47 @@ class DatabaseConnection:
             return document
         else:
             return {'msg': 'Not found'}
+
+    def get_events_duration(self):
+        # Realizar la consulta a la base de datos para obtener la duración de los eventos
+        db = self.client[self.event_db]
+        collection = db['events_eventsduration']
+        duracion_eventos = collection.find_one({"id": 1})
+        if duracion_eventos:
+            return {
+                'year': duracion_eventos.get('year', 0),
+                'month': duracion_eventos.get('month', 0)
+            }
+        else:
+            # En caso de que no se encuentre ninguna duración de eventos en la base de datos,
+            # se devuelven en 0, que hace que no se eliminen los datos.
+            return {
+                'year': 0,
+                'month': 0
+            }
+
+
+    def borrar_eventos_antiguos(self, fecha_limite):
+        # Obtener la colección de eventos
+        db = self.client[self.event_db]
+
+        # Obtener la lista de nombres de todas las colecciones en la base de datos
+        all_collections = db.list_collection_names()
+
+        # Eliminar "events_eventduration" y "events_movementtimezone" de la lista
+        if "events_eventsduration" in all_collections:
+            all_collections.remove("events_eventsduration")
+        if "events_movementtimezone" in all_collections:
+            all_collections.remove("events_movementtimezone")
+
+        # Filtrar las colecciones que empiecen con "events_"
+        eventos_collections = [collection for collection in all_collections if collection.startswith("events_")]
+
+        # Iterar sobre las colecciones de eventos y eliminar eventos antiguos
+        for collection_name in eventos_collections:
+            eventos_collection = db[collection_name]
+
+            # Realizar la consulta para encontrar y eliminar los eventos antiguos
+            resultado = eventos_collection.delete_many({"date_time": { "$lt": fecha_limite }})
+            if resultado.deleted_count:
+                print(f"Cantidad de eventos eliminados en {collection_name}: {resultado.deleted_count}")
