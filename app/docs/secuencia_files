@@ -1,0 +1,25 @@
+@startuml
+actor User
+participant App
+database Database
+
+User -> App: Realiza una solicitud GET a /api/v1/files/<filename>
+App -> Database: Conecta a la base de datos
+App -> Database: Carga el archivo del evento
+Database --> App: Retorna los datos del archivo
+App -> App: Prepara la respuesta
+App -> User: Retorna la respuesta
+
+alt "El nombre de archivo termina con '.jpg'"
+    App -> App: Establece el tipo de contenido como 'image/jpeg'
+end
+
+alt "El nombre de archivo termina con '.mp4'"
+    App -> App: Establece el tipo de contenido como 'video/mp4'
+end
+
+alt "El nombre de archivo termina con '.gif'"
+    App -> App: Establece el tipo de contenido como 'image/gif'
+end
+
+@enduml

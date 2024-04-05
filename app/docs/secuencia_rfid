@@ -1,0 +1,22 @@
+@startuml
+actor User
+participant App
+participant Database
+participant ESP_Device
+participant RFID_Service
+
+User -> App: Realiza una solicitud POST a /api/v1/rfid
+App -> App: Imprime "Llego una request de rfid!"
+App -> App: Obtiene la IP, puerto, usuario y contraseña del cuerpo de la solicitud
+App -> Database: Conecta a la base de datos
+App -> Database: Obtiene el certificado temporal
+App -> Database: Busca el dispositivo por la dirección IP
+alt "El documento no existe en la base de datos"
+    App -> User: Retorna un mensaje de error con código 500
+else "El documento existe en la base de datos"
+    App -> ESP_Device: Realiza una solicitud GET a ESP Device para registrar el RFID
+    ESP_Device --> App: Retorna el ID de RFID
+    App -> App: Cierra el archivo temporal
+    App -> User: Retorna el ID de RFID en la respuesta con código 200
+end
+@enduml
