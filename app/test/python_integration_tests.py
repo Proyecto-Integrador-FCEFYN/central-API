@@ -26,8 +26,6 @@ def test_1(): # /api/v1/event/timbre
 
 def test_2(): # api/v1/event/movimiento
     url = f'http://{user_network_ip}:5000/api/v1/event/movimiento'
-    # ESP32_ip = '192.168.24.123'
-    # Cabecera X-Forwarded-For
     headers = {'X-Forwarded-For': ESP32_IP}
     # Realizar la solicitud POST con la cabecera X-Forwarded-For y los datos en el cuerpo
     response = requests.post(url, headers=headers)
@@ -52,8 +50,8 @@ def test_4(): #/webbutton
 
 # Run all tests / Uncomment tests tu run
 if enable_all_test:
-    # test_1()
-    # test_2()
+    test_1()
+    test_2()
     # test_3()
     test_4()
     # test_5()
