@@ -1,0 +1,33 @@
+@startuml
+actor User
+participant "Web Server" as WebServer
+database "Database" as Database
+participant "RFID Device" as RFIDDevice
+
+User -> WebServer: POST /api/v1/event/rfid
+activate WebServer
+WebServer -> WebServer: Manejar evento RFID
+WebServer -> Database: Conectar a la base de datos
+activate Database
+WebServer -> WebServer: Transformar datos binarios
+WebServer -> Database: Obtener usuario por RFID
+Database --> WebServer: Documento de usuario
+WebServer -> WebServer: Calcular día de la semana
+WebServer -> Database: Obtener zona horaria por ID
+Database --> WebServer: Documento de zona horaria
+WebServer -> WebServer: Obtener dispositivo por IP
+WebServer -> RFIDDevice: Obtener certificado
+activate RFIDDevice
+RFIDDevice -> RFIDDevice: Obtener foto
+RFIDDevice --> WebServer: Datos de imagen
+WebServer -> WebServer: Verificar permisos
+WebServer -> Database: Insertar evento permitido/denegado
+Database --> WebServer: Confirmación de inserción
+WebServer -> RFIDDevice: Abrir la puerta si es necesario
+RFIDDevice --> WebServer: Confirmación de acción
+WebServer -> WebServer: Cerrar conexión
+deactivate RFIDDevice
+deactivate Database
+WebServer -> User: Respuesta HTTP
+deactivate WebServer
+@enduml

@@ -1,0 +1,36 @@
+participant App as "API-central"
+
+@startuml
+participant User as "Django"
+participant App as "API-central"
+participant "Request Object" as Request
+participant db
+participant FileNotFoundError
+
+User -> App: Realiza solicitud GET /api/v1/search\ncon parámetros opcionales
+App -> Request: Extrae parámetros de la solicitud\n(id, filename, uploadDate, length)
+
+alt Parámetro id presente
+    App -> db: Consulta base de datos\ncon id proporcionado
+    db -> App: Retorna documento
+    App -> App: Crea respuesta con documento
+    App -> User: Devuelve el documento
+else Parámetro filename presente
+    App -> db: Consulta base de datos\ncon filename proporcionado
+    db -> App: Retorna documento
+    App -> App: Crea respuesta con documento
+    App -> User: Devuelve el documento
+else Parámetro uploadDate presente
+    App -> db: Consulta base de datos\ncon uploadDate proporcionado
+    db -> App: Retorna documento
+    App -> App: Crea respuesta con documento
+    App -> User: Devuelve el documento
+else Parámetro length presente
+    App -> db: Consulta base de datos\ncon length proporcionado
+    db -> App: Retorna documento
+    App -> App: Crea respuesta con documento
+    App -> User: Devuelve el documento
+else
+    App -> User: Devuelve mensaje de error\n"No se encontró ningún archivo"
+end
+@enduml
