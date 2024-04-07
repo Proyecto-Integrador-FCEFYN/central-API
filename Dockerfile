@@ -13,5 +13,5 @@ RUN pwd
 RUN ls -l
 RUN ls app
 RUN echo ${PATH}
-RUN ln -sf /usr/share/zoneinfo/America/Argentina/Buenos_Aires /etc/localtime
+RUN ln -sf /usr/share/zoneinfo/America/Argentina/Buenos_Aires /etc/localtime && echo "America/Argentina/Buenos_Aires" > /etc/timezone
 CMD [ "gunicorn", "-w", "4", "--bind", "0.0.0.0:5000", "wsgi:app"]
