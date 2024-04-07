@@ -3,7 +3,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 # setup
-user_network_ip='ingreso.lac'
+# user_network_ip='ingreso.lac'
+user_network_ip='localhost'
 ESP32_IP='192.168.24.123'
 ESP32_HTTPS_PORT=443
 ESP32_ID=3
@@ -16,13 +17,12 @@ def test_result(response, url):
     else:
         print(f'{calling_function} = FAIL {url}. Código de estado: {response.status_code}. msg: {response.text}')
 
- 
-def test_1(): # /api/v1/event/timbre
-    url = f'http://{user_network_ip}:5000/api/v1/event/timbre'
-    headers = {'X-Forwarded-For': ESP32_IP}
-    response = requests.post(url, headers=headers)
-    test_result(response, url)    
-
+def test_1(): # /api/v1/event/rfid
+    url = f'http://{user_network_ip}:5000/api/v1/event/rfid'
+    data= 1541611 
+    headers = {'Content-Type': 'application/json', 'X-Forwarded-For': ESP32_IP}
+    response = requests.post(url, json=data, headers=headers)  # Realiza la solicitud POST
+    test_result(response, url)
 
 def test_2(): # api/v1/event/movimiento
     url = f'http://{user_network_ip}:5000/api/v1/event/movimiento'
@@ -30,6 +30,12 @@ def test_2(): # api/v1/event/movimiento
     # Realizar la solicitud POST con la cabecera X-Forwarded-For y los datos en el cuerpo
     response = requests.post(url, headers=headers)
     test_result(response, url)
+
+def test_3(): # /api/v1/event/timbre
+    url = f'http://{user_network_ip}:5000/api/v1/event/timbre'
+    headers = {'X-Forwarded-For': ESP32_IP}
+    response = requests.post(url, headers=headers)
+    test_result(response, url)    
     
 def test_4(): #/webbutton
     url = f'http://{user_network_ip}:5000/api/v1/event/webbutton'
@@ -48,13 +54,19 @@ def test_4(): #/webbutton
 
     
 
+def test_5(): #/api/v1/files
+    url = f'http://192.168.24.120/api/v1/files/1c603243-3a04-4f6a-a72b-792ed8237145.jpg'
+    # headers = {'X-Forwarded-For': ESP32_IP}
+    response = requests.post(url)
+    test_result(response, url)
+
 # Run all tests / Uncomment tests tu run
 if enable_all_test:
-    test_1()
-    test_2()
+    # test_1()
+    # test_2()
     # test_3()
-    test_4()
-    # test_5()
+    # test_4()
+    test_5()
     # test_6()
     # test_7()
     # test_8()
