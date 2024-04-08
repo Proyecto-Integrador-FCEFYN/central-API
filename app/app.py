@@ -192,12 +192,20 @@ def event_movimiento():
     if begin < end:
         if begin < current_time < end:
             print(ret)
+        else:
+            ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
+            print(ret)
+            return ret, 404
     elif begin > end:
         if current_time < begin:
             current_time = current_time + timedelta(days=1)
         if begin < current_time < end + timedelta(days=1):
             print(ret)
-        print(f"{begin} {current_time} {end} ")
+        else:
+            ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
+            print(ret)
+            return ret, 404
+        # print(f"{begin} {current_time} {end} ")
     else:
         ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
         print(ret)
