@@ -3,8 +3,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 # setup
-# user_network_ip='ingreso.lac'
-user_network_ip='localhost'
+user_network_ip='ingreso.lac'
+# user_network_ip='localhost'
 ESP32_IP='192.168.24.123'
 ESP32_HTTPS_PORT=443
 ESP32_ID=3
@@ -64,10 +64,10 @@ def test_5(): #/api/v1/files
 # Run all tests / Uncomment tests tu run
 if enable_all_test:
     # test_1()
-    # test_2()
+    test_2()
     # test_3()
     # test_4()
-    test_5()
+    # test_5()
     # test_6()
     # test_7()
     # test_8()
