@@ -194,12 +194,20 @@ def event_movimiento():
     if begin < end:
         if begin < current_time < end:
             print(ret)
+        else:
+            ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
+            print(ret)
+            return ret, 404
     elif begin > end:
         if current_time < begin:
             current_time = current_time + timedelta(days=1)
         if begin < current_time < end + timedelta(days=1):
             print(ret)
-        print(f"{begin} {current_time} {end} ")
+        else:
+            ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
+            print(ret)
+            return ret, 404
+        # print(f"{begin} {current_time} {end} ")
     else:
         ret = {'msg': 'Fuera de la franja horaria de deteccion de movimiento'}
         print(ret)
@@ -219,7 +227,7 @@ def event_movimiento():
     client = ImageClient(url=f"https://{remote_ip}:{port}/single", folder_name=folder_name)
     fps = client.get_images(tiempo=tiempo_videos, verify_path=tmp_file.name)
     tmp_file.close()
-    
+
     # Convertir las imagenes en video
     video_converter = ImageToVideo(filename=filename, folder_name=folder_name)
     # if not video_converter.video_from_images2(fps=fps):
