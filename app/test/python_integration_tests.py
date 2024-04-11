@@ -63,11 +63,11 @@ def test_5(): #/api/v1/files
 
 # Run all tests / Uncomment tests tu run
 if enable_all_test:
-    # test_1()
+    test_1()
     test_2()
-    # test_3()
-    # test_4()
-    # test_5()
+    test_3()
+    test_4()
+    test_5()
     # test_6()
     # test_7()
     # test_8()
