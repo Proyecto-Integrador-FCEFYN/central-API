@@ -55,7 +55,7 @@ def test_4(): #/webbutton
     
 
 def test_5(): #/api/v1/files
-    url = f'http://192.168.24.120/api/v1/files/1c603243-3a04-4f6a-a72b-792ed8237145.jpg'
+    url = f'http://ingreso.lac/api/v1/files/1c603243-3a04-4f6a-a72b-792ed8237145.jpg'
     ca_cert_path= './RootCA.crt'
     # headers = {'X-Forwarded-For': ESP32_IP}
     response = requests.post(url, verify=ca_cert_path)
@@ -67,7 +67,7 @@ if enable_all_test:
     test_2()
     test_3()
     test_4()
-    test_5()
+    # test_5()
     # test_6()
     # test_7()
     # test_8()

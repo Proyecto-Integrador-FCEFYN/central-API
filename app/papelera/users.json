@@ -140,12 +140,12 @@
     "_id": ObjectId("65c29c6440cd44000842d67a"),
     "id": 8,
     "password": "pbkdf2_sha256$36000$sjlYToFvgljM$MREuSNC5bU0Xujr2eXEVutEPdVnbeHU8n58WD1O84TQ=",
-    "last_login": ISODate("2024-04-09T15:35:58.727Z"),
+    "last_login": ISODate("2024-04-12T15:42:59.653Z"),
     "first_name": "Franco David",
     "last_name": "D'Andrea",
     "email": "david.do.it@gmail.com",
     "identity": "33178206",
-    "phone": "3582431838",
+    "phone": "3582-444444",
     "expiration_date": ISODate("2024-02-06T00:00:00Z"),
     "monday_id": 1,
     "tuesday_id": 1,
@@ -157,7 +157,7 @@
     "code": "1541611",
     "is_staff": true,
     "is_active": true,
-    "date_joined": ISODate("2024-02-08T02:53:56.699Z")
+    "date_joined": ISODate("2024-02-08T08:53:56.699Z")
 }
 {
     "_id": ObjectId("65e379ce292f910136b57ca6"),
@@ -204,4 +204,50 @@
     "is_staff": true,
     "is_active": true,
     "date_joined": ISODate("2024-03-09T23:38:38.507Z")
+}
+{
+    "_id": ObjectId("66195206292f910026339173"),
+    "id": 11,
+    "password": "pbkdf2_sha256$36000$jm1Flz9YVA7k$2J9BhOg37lY3cMib2hgRUheASYHpU5/frlTOzYNpyck=",
+    "last_login": null,
+    "first_name": "Test1",
+    "last_name": "No-Admin-1",
+    "email": "fd.dandrea@unc.edu.ar",
+    "identity": "11222333",
+    "phone": "351-454563",
+    "expiration_date": ISODate("2024-04-12T00:00:00Z"),
+    "monday_id": 1,
+    "tuesday_id": 1,
+    "wednesday_id": 1,
+    "thursday_id": 1,
+    "friday_id": 1,
+    "saturday_id": 1,
+    "sunday_id": 1,
+    "code": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": ISODate("2024-04-13T00:23:50.880Z")
+}
+{
+    "_id": ObjectId("661969ce292f910026339175"),
+    "id": 12,
+    "password": "",
+    "last_login": null,
+    "first_name": "Que",
+    "last_name": "Sio",
+    "email": "a@hola.com",
+    "identity": "2",
+    "phone": "2",
+    "expiration_date": ISODate("2024-04-12T00:00:00Z"),
+    "monday_id": 1,
+    "tuesday_id": 1,
+    "wednesday_id": 1,
+    "thursday_id": 1,
+    "friday_id": 1,
+    "saturday_id": 1,
+    "sunday_id": 1,
+    "code": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": ISODate("2024-04-12T20:05:18.783Z")
 }
