@@ -7,10 +7,14 @@ services:
   privileged: true
   build:
     context: .
-    # flask requires SIGINT to stop gracefully
-    # (default stop signal from Compose is SIGTERM)
+    dockerfile: Dockerfile.app
+  image: central-api:v1.0.1
   stop_signal: SIGINT
   ports:
     - 5000:5000
-
   command: uwsgi --http 0.0.0.0:5000 --master -p 4 -w wsgi:app 
+  deploy:
+        resources:
+          limits:
+            cpus: '1'
+            memory: 300M
