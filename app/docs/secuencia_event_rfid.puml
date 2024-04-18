@@ -1,0 +1,45 @@
+@startuml
+participant User as "ESP32"
+participant "api-central" as WebServer
+database "mongoDB" as Database
+
+User -> WebServer: POST /api/v1/event/rfid
+activate WebServer
+WebServer -> WebServer: remote_ip = request.remote_addr\n         RFID=request.getData()
+WebServer -> Database: get device(remote_ip)
+activate Database
+Database --> WebServer: device document
+deactivate Database 
+
+alt Dispositivo no registrado
+  WebServer --> User: Respuesta HTTP 404 {'msg': 'Error con el dispositivo'} 
+else Disposiivo registrado
+  WebServer -> Database: Obtener usuario por RFID
+  activate Database
+  Database --> WebServer: Documento de usuario
+  WebServer -> Database: Obtener franja horaria por ID de usuario
+  Database --> WebServer: Documento de franja horaria
+  deactivate Database
+  WebServer -> WebServer: Verificar permisos
+  alt RFID autorizado 
+      WebServer -> User: Obtener foto
+      User --> WebServer: Datos de imagen
+      WebServer -> Database: Insertar evento acceso RFID
+      Database --> WebServer: Confirmación de inserción
+      WebServer -> User: Abrir la puerta
+      User --> WebServer: Confirmación de acción \n
+      WebServer --> User: Respuesta HTTP 200 {'msg': 'Acceso Permitido'}
+  else RFID no autorizado 
+      WebServer -> User: Obtener foto
+      User --> WebServer: Datos de imagen
+      WebServer -> Database: Insertar evento denegado
+      Database --> WebServer: Confirmación de inserción
+      WebServer --> User: Respuesta HTTP 403 {'msg': 'Acceso Denegado'}
+      deactivate Database    
+  end
+end
+
+
+
+deactivate WebServer
+@enduml
