@@ -4,16 +4,6 @@ import requests
 from PIL import Image
 import io
 
-## Plantilla de prueba
-# Id. Caso de prueba p8.<Nro.Prueba>
-# Tipo de prueba: 
-# Objetivo de la prueba:
-# Prerequisitos:
-# Resultado esperado:
-# Resultado opbtenido
-
-
-
 def test_result(response, url, condiciones=""):
     calling_function = inspect.stack()[1].function
     if response.status_code == 200:
