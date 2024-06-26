@@ -4,8 +4,6 @@ import uuid
 
 from flask import Flask, send_file, request, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flasgger import Swagger
-
 from app.ImageToVideo import ImageToVideo, ImageClient, DatabaseConnection
 from app.ImageToVideo import clean_videos, clean_images
 from bson.objectid import ObjectId

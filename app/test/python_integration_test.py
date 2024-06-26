@@ -1,8 +1,8 @@
 import inspect
 import unittest
 import requests
-from PIL import Image
-import io
+# from PIL import Image
+
 
 def test_result(response, url, condiciones=""):
     calling_function = inspect.stack()[1].function
